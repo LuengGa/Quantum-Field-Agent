@@ -1274,14 +1274,20 @@ class QuantumField:
     def __init__(self):
         print(f"[QF-Agent V4.0] 初始化中...")
 
-        self.client = OpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+        # 支持 Qwen (通义千问) 和 OpenAI 兼容接口
+        api_key = os.getenv("QWEN_API_KEY") or os.getenv("OPENAI_API_KEY")
+        base_url = os.getenv("QWEN_BASE_URL") or os.getenv(
+            "OPENAI_BASE_URL", "https://api.openai.com/v1"
         )
-        self.async_client = AsyncOpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-        )
+
+        if api_key:
+            self.client = OpenAI(api_key=api_key, base_url=base_url)
+            self.async_client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+            print(f"[QF-Agent] ✓ AI客户端已初始化 (base_url: {base_url})")
+        else:
+            self.client = None
+            self.async_client = None
+            print("[QF-Agent] ⚠ 无API密钥，AI功能受限")
 
         self.db_path = "quantum_memory.db"
         self._init_db()
@@ -1301,8 +1307,13 @@ class QuantumField:
         self.audit_available = False
         self._init_audit()
 
-        self.model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
-        self.high_entropy_model = os.getenv("HIGH_ENTROPY_MODEL", "gpt-4o")
+        # Qwen 模型名优先，否则用 OpenAI
+        self.model_name = os.getenv("QWEN_MODEL_NAME") or os.getenv(
+            "MODEL_NAME", "qwen-turbo"
+        )
+        self.high_entropy_model = os.getenv("QWEN_HIGH_ENTROPY_MODEL") or os.getenv(
+            "HIGH_ENTROPY_MODEL", "qwen-plus"
+        )
         self.entropy_threshold = float(os.getenv("ENTROPY_THRESHOLD", "0.8"))
         self.node_id = os.getenv("NODE_ID", f"node-{uuid.uuid4().hex[:8]}")
 
@@ -1749,6 +1760,15 @@ class QuantumField:
     async def health_check(self) -> Dict[str, Any]:
         """健康检查"""
         uptime = (datetime.now() - self.started_at).total_seconds()
+        # 检查 AI 客户端状态
+        if self.client:
+            if os.getenv("QWEN_API_KEY"):
+                ai_status = "qwen_connected"
+            else:
+                ai_status = "connected"
+        else:
+            ai_status = "disabled"
+
         return {
             "status": "healthy",
             "version": self.VERSION,
@@ -1760,6 +1780,7 @@ class QuantumField:
                 "entanglement": "ok" if self.entanglement_available else "disabled",
                 "multimodal": "ok" if self.multimodal_available else "disabled",
                 "temporal": "ok" if self.temporal_available else "disabled",
+                "ai": ai_status,
             },
             "stats": self.stats,
         }

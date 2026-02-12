@@ -95,7 +95,9 @@ try:
     health = asyncio.run(qf.health_check())
     test("健康检查", health["status"] == "healthy")
     test("SQLite连接", health["components"]["sqlite"] == "connected")
-    test("OpenAI连接", health["components"]["openai"] == "connected")
+    # 支持 Qwen 和 OpenAI (ai 字段)
+    ai_status = health["components"].get("ai", "disabled")
+    test("AI连接 (Qwen/OpenAI)", ai_status in ["connected", "qwen_connected"])
 
     # 配置检查
     config = qf.get_config()
