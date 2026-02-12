@@ -1569,7 +1569,7 @@ class QuantumField:
         intent_hash = self.audit_chain.quick_hash(message) if self.audit_chain else ""
         output_chunks = []
 
-        async with await self.user_lock_manager.lock(
+        async with self.user_lock_manager.lock(
             user_id, "process", ttl=60.0
         ) as acquired:
             if not acquired:
