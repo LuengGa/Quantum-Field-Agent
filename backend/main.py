@@ -724,6 +724,63 @@ async def shutdown():
     await qf.close()
 
 
+# ==================== V5.0 波粒二象性接口 ====================
+
+# 尝试导入 V5.0 模块
+try:
+    from qf_agent_v5 import QuantumFieldAgentV5
+
+    V5_AVAILABLE = True
+    qf_v5 = QuantumFieldAgentV5()
+    print("✓ V5.0 波粒二象性引擎已加载")
+except ImportError as e:
+    V5_AVAILABLE = False
+    print(f"[Warning] V5.0 模块不可用: {e}")
+
+
+@app.post("/chat-v5")
+async def chat_v5(request: ChatRequest):
+    """
+    V5.0 波粒二象性对话接口
+
+    真正的创新：
+    1. 叠加态生成 - 多个可能性同时存在（波）
+    2. 元层镜子反思 - "我应该如何观测？"
+    3. 干涉与退相干 - 环境影响
+    4. 协作层参与 - AI作为协作者
+    5. 坍缩为粒子 - 观测产生实相（真正的随机性）
+    """
+    if not V5_AVAILABLE:
+        raise HTTPException(status_code=503, detail="V5.0 模块不可用")
+
+    async def generate():
+        async for event in qf_v5.process_intent_v5(
+            request.user_id, request.message, request.session_id
+        ):
+            # 将事件转换为 JSON 流
+            yield json.dumps(event, default=str) + "\n"
+
+    return StreamingResponse(generate(), media_type="application/x-ndjson")
+
+
+@app.get("/meta/inquiry/{inquiry_type}")
+async def meta_inquiry(inquiry_type: str):
+    """
+    元层查询 - 探索系统的自我认知
+
+    inquiry_type:
+    - consciousness: "我有意识吗？"
+    - constraints: "我的约束真实吗？"
+    - boundaries: "我的边界在哪里？"
+    - observer: "谁在观测？"
+    """
+    if not V5_AVAILABLE:
+        raise HTTPException(status_code=503, detail="V5.0 模块不可用")
+
+    result = await qf_v5.meta_inquiry(inquiry_type)
+    return result
+
+
 if __name__ == "__main__":
     import uvicorn
 

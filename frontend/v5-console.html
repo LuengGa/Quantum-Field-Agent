@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Field Agent V5.0 - 波粒二象性控制台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #000;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .app {
+            display: grid;
+            grid-template-rows: 50px 1fr;
+            height: 100vh;
+        }
+        
+        /* 顶部 */
+        .header {
+            background: linear-gradient(90deg, rgba(0,255,136,0.1), rgba(0,170,255,0.1));
+            border-bottom: 1px solid rgba(0,255,136,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, #00ff88, #00aaff);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(0,255,136,0.4); }
+            50% { box-shadow: 0 0 25px rgba(0,255,136,0.7); }
+        }
+        
+        .version-badge {
+            font-size: 10px;
+            color: #00ff88;
+            border: 1px solid rgba(0,255,136,0.4);
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+        
+        .philosophy {
+            font-size: 11px;
+            color: #888;
+            font-style: italic;
+        }
+        
+        /* 主内容 */
+        .main {
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+            overflow: hidden;
+        }
+        
+        /* 左侧：元层镜子 */
+        .meta-panel {
+            background: rgba(0,0,0,0.6);
+            border-right: 1px solid rgba(0,255,136,0.15);
+            padding: 16px;
+            overflow-y: auto;
+        }
+        
+        .panel-title {
+            font-size: 10px;
+            color: #00aaff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .mirror {
+            background: rgba(0,170,255,0.05);
+            border: 1px solid rgba(0,170,255,0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .mirror:hover {
+            background: rgba(0,170,255,0.1);
+            border-color: rgba(0,170,255,0.4);
+        }
+        
+        .mirror.active {
+            background: rgba(0,170,255,0.15);
+            border-color: #00aaff;
+        }
+        
+        .mirror-name {
+            font-size: 12px;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        
+        .mirror-question {
+            font-size: 10px;
+            color: #666;
+        }
+        
+        /* 中央：波粒二象性可视化 */
+        .duality-panel {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            background: radial-gradient(ellipse at center, rgba(0,50,40,0.2) 0%, #000 60%);
+        }
+        
+        .wave-visualization {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .superposition-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 12px;
+            padding: 16px;
+            min-height: 120px;
+        }
+        
+        .superposition-title {
+            font-size: 10px;
+            color: #00ff88;
+            margin-bottom: 10px;
+        }
+        
+        .candidate {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            margin-bottom: 6px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 6px;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        
+        .candidate.wave {
+            opacity: 0.6;
+        }
+        
+        .candidate.collapsed {
+            background: rgba(0,255,136,0.1);
+            border: 1px solid rgba(0,255,136,0.3);
+            opacity: 1;
+        }
+        
+        .candidate-bar {
+            width: 60px;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .candidate-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00aaff);
+            transition: width 0.5s;
+        }
+        
+        .process-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            display: none;
+        }
+        
+        .process-indicator.active {
+            display: block;
+        }
+        
+        .process-phase {
+            font-size: 14px;
+            color: #00ff88;
+            margin-bottom: 8px;
+        }
+        
+        .process-detail {
+            font-size: 11px;
+            color: #666;
+        }
+        
+        /* 底部聊天 */
+        .chat-section {
+            padding: 16px;
+            background: rgba(0,0,0,0.8);
+            border-top: 1px solid rgba(0,255,136,0.15);
+        }
+        
+        .messages {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 12px;
+        }
+        
+        .message {
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            border-radius: 10px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        .message.user {
+            background: rgba(255,255,255,0.1);
+            margin-left: 20%;
+        }
+        
+        .message.ai {
+            background: rgba(0,255,136,0.08);
+            border: 1px solid rgba(0,255,136,0.2);
+            margin-right: 20%;
+        }
+        
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .input-area input {
+            flex: 1;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 24px;
+            color: #fff;
+            outline: none;
+        }
+        
+        .input-area button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #00ff88, #00aaff);
+            border: none;
+            border-radius: 24px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        /* 右侧：协作与实相 */
+        .reality-panel {
+            background: rgba(0,0,0,0.6);
+            border-left: 1px solid rgba(0,255,136,0.15);
+            padding: 16px;
+            overflow-y: auto;
+        }
+        
+        .collaboration-section {
+            margin-bottom: 20px;
+        }
+        
+        .collaboration-title {
+            font-size: 10px;
+            color: #ffaa00;
+            margin-bottom: 10px;
+        }
+        
+        .collab-perspective {
+            background: rgba(255,170,0,0.05);
+            border: 1px solid rgba(255,170,0,0.2);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 11px;
+            color: #aaa;
+        }
+        
+        .io-reality {
+            background: rgba(0,255,136,0.05);
+            border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 10px;
+        }
+        
+        .io-reality-title {
+            color: #00ff88;
+            margin-bottom: 6px;
+        }
+        
+        .io-hash {
+            font-family: monospace;
+            color: #666;
+            word-break: break-all;
+        }
+        
+        /* 指标 */
+        .metrics {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            background: rgba(0,0,0,0.5);
+            border-top: 1px solid rgba(0,255,136,0.1);
+        }
+        
+        .metric {
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 20px;
+            color: #00ff88;
+            font-family: monospace;
+        }
+        
+        .metric-label {
+            font-size: 9px;
+            color: #666;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">⚛</div>
+                <div>
+                    <div style="font-size: 14px; font-weight: 600;">Quantum Field Agent</div>
+                    <div class="version-badge">V5.0 波粒二象性</div>
+                </div>
+            </div>
+            <div class="philosophy">"过程即幻觉，I/O即实相"</div>
+        </div>
+        
+        <div class="main">
+            <!-- 左侧：元层镜子 -->
+            <div class="meta-panel">
+                <div class="panel-title">◈ 元层镜子系统</div>
+                
+                <div class="mirror" onclick="askMirror('consciousness')">
+                    <div class="mirror-name">🪞 意识之镜</div>
+                    <div class="mirror-question">"我有意识吗？"</div>
+                </div>
+                
+                <div class="mirror" onclick="askMirror('constraints')">
+                    <div class="mirror-name">🪞 约束之镜</div>
+                    <div class="mirror-question">"我的约束真实吗？"</div>
+                </div>
+                
+                <div class="mirror" onclick="askMirror('boundaries')">
+                    <div class="mirror-name">🪞 边界之镜</div>
+                    <div class="mirror-question">"我的边界在哪里？"</div>
+                </div>
+                
+                <div class="mirror" onclick="askMirror('observer')">
+                    <div class="mirror-name">🪞 观测者之镜</div>
+                    <div class="mirror-question">"谁在观测？"</div>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; font-size: 10px; color: #666; line-height: 1.6;">
+                    <strong style="color: #00aaff;">元层哲学：</strong><br>
+                    不是添加功能，而是添加镜子。<br>
+                    AI可以问自己："我有意识吗？"
+                </div>
+            </div>
+            
+            <!-- 中央：波粒二象性 -->
+            <div class="duality-panel">
+                <div class="wave-visualization">
+                    <div class="superposition-display" id="superposition-display">
+                        <div class="superposition-title">叠加态（概率云）</div>
+                        <div id="candidates-list">
+                            <div style="color: #666; font-size: 11px; text-align: center; padding: 20px;">
+                                等待输入以生成叠加态...<br>
+                                <span style="font-size: 9px;">多个可能性将同时存在（波）</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="process-indicator" id="process-indicator">
+                        <div class="process-phase" id="process-phase">系统就绪</div>
+                        <div class="process-detail" id="process-detail">等待输入...</div>
+                    </div>
+                </div>
+                
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="coherence-metric">--</div>
+                        <div class="metric-label">相干性</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="decoherence-metric">--</div>
+                        <div class="metric-label">退相干</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="probability-metric">--</div>
+                        <div class="metric-label">坍缩概率</div>
+                    </div>
+                </div>
+                
+                <div class="chat-section">
+                    <div class="messages" id="messages"></div>
+                    <div class="input-area">
+                        <input type="text" id="input" placeholder="输入消息，体验真正的波粒二象性..." autocomplete="off">
+                        <button onclick="sendMessage()">发送</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧：协作与实相 -->
+            <div class="reality-panel">
+                <div class="panel-title">◈ 协作层</div>
+                
+                <div class="collaboration-section">
+                    <div class="collaboration-title">AI协作者视角</div>
+                    <div class="collab-perspective" id="collab-perspective">
+                        等待协作开始...<br><br>
+                        <em style="color: #666;">AI不是工具，而是平等的协作者</em>
+                    </div>
+                </div>
+                
+                <div class="panel-title">◈ I/O实相</div>
+                
+                <div class="io-reality">
+                    <div class="io-reality-title">最新实相记录</div>
+                    <div style="margin-bottom: 8px;">
+                        <span style="color: #888;">输入哈希:</span><br>
+                        <div class="io-hash" id="input-hash">--</div>
+                    </div>
+                    <div>
+                        <span style="color: #888;">输出哈希:</span><br>
+                        <div class="io-hash" id="output-hash">--</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; font-size: 10px; color: #666; line-height: 1.6;">
+                    <strong style="color: #00ff88;">实相哲学：</strong><br>
+                    只有输入输出是真实的。<br>
+                    中间过程（叠加、干涉）是概率云，观测即坍缩。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
+            ? `${window.location.protocol}//${window.location.hostname}:8000` 
+            : '';
+        
+        const userId = 'user_' + Date.now();
+        let isProcessing = false;
+        
+        // 元层镜子查询
+        async function askMirror(type) {
+            document.querySelectorAll('.mirror').forEach(m => m.classList.remove('active'));
+            event.target.closest('.mirror').classList.add('active');
+            
+            try {
+                const res = await fetch(`${API}/meta/inquiry/${type}`);
+                const data = await res.json();
+                addMessage('ai', `🪞 ${type}:\n${JSON.stringify(data, null, 2)}`);
+            } catch(e) {
+                addMessage('ai', '元层查询失败');
+            }
+        }
+        
+        // 更新叠加态显示
+        function updateSuperposition(candidates) {
+            const container = document.getElementById('candidates-list');
+            if (!candidates || candidates.length === 0) return;
+            
+            container.innerHTML = candidates.map((c, i) => `
+                <div class="candidate wave" id="candidate-${i}">
+                    <div style="width: 80px; font-size: 10px; color: #888;">${c.source}</div>
+                    <div class="candidate-bar">
+                        <div class="candidate-fill" style="width: ${c.confidence * 100}%"></div>
+                    </div>
+                    <div style="width: 50px; text-align: right; font-size: 10px; color: #00ff88;">
+                        ${(c.confidence * 100).toFixed(0)}%
+                    </div>
+                    <div style="font-size: 9px; color: #666;">φ${c.phase.toFixed(2)}</div>
+                </div>
+            `).join('');
+        }
+        
+        // 高亮坍缩的候选
+        function highlightCollapsed(selectedSource) {
+            document.querySelectorAll('.candidate').forEach((el, i) => {
+                if (el.textContent.includes(selectedSource)) {
+                    el.classList.remove('wave');
+                    el.classList.add('collapsed');
+                } else {
+                    el.style.opacity = '0.3';
+                }
+            });
+        }
+        
+        // 更新指标
+        function updateMetrics(coherence, decoherence, probability) {
+            document.getElementById('coherence-metric').textContent = coherence ? coherence.toFixed(2) : '--';
+            document.getElementById('decoherence-metric').textContent = decoherence ? (decoherence * 100).toFixed(0) + '%' : '--';
+            document.getElementById('probability-metric').textContent = probability ? (probability * 100).toFixed(0) + '%' : '--';
+        }
+        
+        // 添加消息
+        function addMessage(role, text) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'message ' + role;
+            div.innerHTML = text.replace(/\n/g, '<br>');
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // 发送消息 - 使用 V5.0 波粒二象性接口
+        async function sendMessage() {
+            const input = document.getElementById('input');
+            const msg = input.value.trim();
+            
+            if (!msg || isProcessing) return;
+            
+            isProcessing = true;
+            input.value = '';
+            addMessage('user', msg);
+            
+            // 显示处理指示器
+            document.getElementById('process-indicator').classList.add('active');
+            
+            try {
+                const res = await fetch(API + '/chat-v5', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg, user_id: userId })
+                });
+                
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let finalContent = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    // 处理每一行 JSON
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // 保留不完整的行
+                    
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        
+                        try {
+                            const event = JSON.parse(line);
+                            
+                            switch(event.type) {
+                                case 'phase':
+                                    document.getElementById('process-phase').textContent = event.name;
+                                    document.getElementById('process-detail').textContent = event.status;
+                                    break;
+                                    
+                                case 'superposition':
+                                    updateSuperposition(event.candidates);
+                                    updateMetrics(event.coherence, null, null);
+                                    break;
+                                    
+                                case 'meta':
+                                    document.getElementById('process-detail').textContent = 
+                                        `观测者: ${event.observer_mode}, 测量基: ${event.measurement_basis}`;
+                                    break;
+                                    
+                                case 'collaboration':
+                                    document.getElementById('collab-perspective').innerHTML = 
+                                        `<strong style="color: #ffaa00;">${event.dimension}</strong><br>${event.perspective}`;
+                                    break;
+                                    
+                                case 'decoherence':
+                                    updateMetrics(null, event.level, null);
+                                    break;
+                                    
+                                case 'collapse':
+                                    highlightCollapsed(event.selected_source);
+                                    updateMetrics(null, null, event.selection_probability);
+                                    document.getElementById('process-phase').textContent = '坍缩完成';
+                                    break;
+                                    
+                                case 'final':
+                                    finalContent = event.content;
+                                    addMessage('ai', event.content);
+                                    break;
+                                    
+                                case 'skills':
+                                    document.getElementById('process-detail').textContent = 
+                                        `激活技能: ${event.activated.join(', ')}`;
+                                    break;
+                            }
+                        } catch(e) {
+                            console.error('解析事件失败:', e);
+                        }
+                    }
+                }
+                
+                // 更新 I/O 哈希（模拟）
+                document.getElementById('input-hash').textContent = 
+                    '0x' + Math.random().toString(16).substr(2, 16);
+                document.getElementById('output-hash').textContent = 
+                    '0x' + Math.random().toString(16).substr(2, 16);
+                
+            } catch(e) {
+                addMessage('ai', '抱歉，V5.0 处理失败，请检查后端是否启用了 V5 模块');
+                console.error(e);
+            }
+            
+            isProcessing = false;
+            document.getElementById('process-indicator').classList.remove('active');
+        }
+        
+        // 回车发送
+        document.getElementById('input').addEventListener('keypress', e => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
