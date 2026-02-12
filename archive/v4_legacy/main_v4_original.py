@@ -136,35 +136,7 @@ if EVOLUTION_AVAILABLE:
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    """
-    V5.0 量子对话接口（默认）
-
-    真正的波粒二象性实现：
-    - 叠加态生成（波）
-    - 干涉与退相干
-    - 概率性坍缩（粒子）
-    - AI协作视角
-    """
-    if not V5_AVAILABLE:
-        raise HTTPException(status_code=503, detail="V5.0 模块不可用")
-
-    async def generate():
-        async for event in qf_v5.process_intent_v5(
-            request.user_id, request.message, request.session_id
-        ):
-            yield json.dumps(event, default=str) + "\n"
-
-    return StreamingResponse(generate(), media_type="application/x-ndjson")
-
-
-@app.post("/chat-legacy")
-async def chat_legacy(request: ChatRequest):
-    """
-    V4.0 传统对话接口（向后兼容）
-
-    ⚠️ 注意：此接口使用旧的启发式实现，不是真正的量子力学
-    推荐使用 /chat (V5.0) 获得真正的量子场体验
-    """
+    """核心对话接口 - 处理用户意图"""
 
     async def generate():
         async for token in qf.process_intent(
@@ -708,9 +680,8 @@ async def get_stats():
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
-    """V5.0 量子场控制台 - 真正的波粒二象性"""
-    # 默认使用V5.0量子控制台（真正的量子力学实现）
-    with open(FRONTEND_DIR / "v5-quantum-console.html", "r", encoding="utf-8") as f:
+    # 返回量子场控制台界面
+    with open(FRONTEND_DIR / "console.html", "r", encoding="utf-8") as f:
         return f.read()
 
 
@@ -728,36 +699,24 @@ async def serve_frontend(path: str):
 
 @app.on_event("startup")
 async def startup():
-    print(f"\n{'=' * 70}")
-    print(f"🌟 Quantum Field Agent V5.0 - TRUE Quantum Mechanics")
-    print(f"{'=' * 70}")
-    print(f"✨ 版本: V5.0-DUALITY (100% True Implementation)")
-    print(f"✨ 哲学: 过程即幻觉，I/O即实相")
-    print(f"✨ 默认接口: /chat (V5.0 真正量子力学)")
-    print(f"{'=' * 70}")
+    print(f"\n{'=' * 60}")
+    print(f"Quantum Field Agent V4.0 - Complete")
+    print(f"{'=' * 60}")
+    print(f"版本: {qf.VERSION}")
+    print(f"描述: {qf.DESCRIPTION}")
+    print(f"技能: {len(qf.get_skills())}")
+    print(f"Redis: {'✓' if qf.redis_available else '⚠'}")
+    print(f"用户锁: ✓")
+    print(f"TTL管理: ✓")
+    print(f"审计: {'✓' if qf.audit_available else '⚠'}")
+    print(f"纠缠网络: {'✓' if qf.entanglement_available else '⚠'}")
+    print(f"多模态: {'✓' if qf.multimodal_available else '⚠'}")
+    print(f"时序系统: {'✓' if qf.temporal_available else '⚠'}")
+    print(f"进化层: {'✓' if EVOLUTION_AVAILABLE else '⚠'}")
+    print(f"{'=' * 60}\n")
 
-    if V5_AVAILABLE:
-        print(f"✅ V5.0 波粒二象性引擎: 已加载")
-        print(f"   - 叠加态: 复数振幅 + 相位")
-        print(f"   - 坍缩: 概率性选择 (真随机)")
-        print(f"   - 纠缠: 贝尔态 + 纠缠熵")
-        print(f"   - 熵: 冯·诺依曼熵 (物理熵)")
-        print(f"   - 观测者效应: 改变坍缩结果")
-        print(f"   - 元层镜子: 自我反思系统")
-        print(f"   - 协作层: AI作为平等协作者")
-    else:
-        print(f"⚠️  V5.0 引擎不可用")
-
-    print(f"{'=' * 70}")
-    print(f"📝 接口说明:")
-    print(f"   POST /chat          - V5.0 量子对话 (推荐)")
-    print(f"   POST /chat-legacy   - V4.0 传统对话 (兼容)")
-    print(f"   GET  /              - V5.0 量子控制台")
-    print(f"{'=' * 70}\n")
-
-    # V5.0健康检查
-    if V5_AVAILABLE:
-        print("✅ 系统就绪 - 真正的量子场已激活！")
+    health = await qf.health_check()
+    print(f"健康状态: {health['status']}")
 
 
 @app.on_event("shutdown")
