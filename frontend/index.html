@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Quantum Field Agent</title>
+<style>
+:root {
+  --bg: #050508;
+  --bg2: #0a0a12;
+  --bg3: #12121c;
+  --border: rgba(0,255,136,0.08);
+  --text: #e0e0e0;
+  --text2: #888;
+  --accent: #00ff88;
+  --accent2: #00aaff;
+  --accent3: #ff66aa;
+}
+
+[data-theme="light"] {
+  --bg: #f5f5f7;
+  --bg2: #ffffff;
+  --bg3: #f0f0f2;
+  --border: rgba(0,150,100,0.15);
+  --text: #1d1d1f;
+  --text2: #6e6e73;
+  --accent: #00a855;
+  --accent2: #007aff;
+  --accent3: #ff2d55;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; height: 100vh; }
+
+.sidebar { width: 280px; background: var(--bg3); border-right: 1px solid var(--border); display: flex; flex-direction: column; transform: translateX(-100%); transition: transform 0.3s; position: fixed; left: 0; top: 0; bottom: 0; z-index: 1000; }
+.sidebar.open { transform: translateX(0); }
+.sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+.sidebar-title { font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: 1px; }
+.new-chat-btn { width: 100%; margin-top: 12px; padding: 12px; background: linear-gradient(135deg, var(--accent), #00cc6a); color: #000; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.session-list { flex: 1; overflow-y: auto; padding: 12px; }
+
+.main { flex: 1; display: flex; flex-direction: column; height: 100%; position: relative; z-index: 1; }
+.header { padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--bg2); display: flex; justify-content: space-between; align-items: center; }
+.menu-btn { background: none; border: 1px solid var(--border); color: var(--accent); font-size: 18px; width: 40px; height: 40px; border-radius: 10px; cursor: pointer; }
+.title { font-size: 16px; font-weight: bold; background: linear-gradient(90deg, var(--accent), #00d4aa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+.status-indicator { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(0,0,0,0.3); border-radius: 20px; border: 1px solid var(--border); }
+[data-theme="light"] .status-indicator { background: rgba(0,0,0,0.05); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #333; }
+.status-dot.ready { background: var(--accent); box-shadow: 0 0 10px rgba(0,255,136,0.4); }
+.status-dot.resonance { background: var(--accent2); animation: pulse 0.5s infinite; }
+.status-dot.processing { background: var(--accent); animation: pulse 0.6s infinite; }
+.status-dot.collapse { background: var(--accent3); animation: pulse 0.4s infinite; }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.4); } }
+.status-text { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; }
+
+.theme-btn { background: none; border: 1px solid var(--border); color: var(--text2); font-size: 16px; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; }
+
+.domain-selector { display: flex; gap: 6px; padding: 10px 16px; background: var(--bg3); border-bottom: 1px solid var(--border); overflow-x: auto; }
+.domain-btn { padding: 6px 14px; background: transparent; border: 1px solid var(--border); color: var(--text2); border-radius: 16px; font-size: 12px; cursor: pointer; }
+.domain-btn.active { background: rgba(0,255,136,0.08); border-color: var(--accent); color: var(--accent); }
+
+.field-viz { display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); overflow-x: auto; }
+.field-label { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px; writing-mode: vertical-rl; }
+.skill-node { padding: 6px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: 18px; font-size: 11px; color: #555; white-space: nowrap; transition: all 0.3s; }
+.skill-node.active { border-color: var(--accent); color: var(--accent); background: rgba(0,255,136,0.08); box-shadow: 0 0 30px rgba(0,255,136,0.4); animation: skillPulse 1s ease; }
+.skill-node.resonating { border-color: var(--accent2); color: var(--accent2); background: rgba(0,170,255,0.08); animation: skillResonate 0.8s ease; }
+@keyframes skillPulse { 0% { transform: scale(1); box-shadow: 0 0 0 rgba(0,255,136,0); } 40% { transform: scale(1.2); box-shadow: 0 0 50px rgba(0,255,136,0.6); } 100% { transform: scale(1); box-shadow: 0 0 30px rgba(0,255,136,0.4); } }
+@keyframes skillResonate { 0% { transform: scale(1); } 30% { transform: scale(1.3); box-shadow: 0 0 30px rgba(0,170,255,0.6); } 100% { transform: scale(1); } }
+
+.chat { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.message { max-width: 85%; padding: 12px 16px; border-radius: 12px; line-height: 1.6; font-size: 14px; animation: fadeIn 0.4s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 关键修复：使用CSS变量确保主题切换正常工作 */
+.message.user { 
+  align-self: flex-end; 
+  background: rgba(35,35,50,0.95); 
+  border: 1px solid var(--border); 
+  color: var(--text); 
+  border-bottom-right-radius: 4px; 
+}
+.message.ai { 
+  align-self: flex-start; 
+  background: rgba(0,255,136,0.05); 
+  border: 1px solid rgba(0,255,136,0.2); 
+  color: var(--text); 
+  border-bottom-left-radius: 4px; 
+}
+
+/* 亮色主题下修复 */
+[data-theme="light"] .message.user { background: rgba(240,240,245,0.98); }
+[data-theme="light"] .message.ai { background: rgba(0,168,85,0.08); border-color: rgba(0,168,85,0.3); }
+
+.message-label { font-size: 10px; opacity: 0.5; margin-bottom: 6px; }
+.stage-timeline { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.stage-item { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 11px; color: var(--text2); animation: stageIn 0.5s ease; }
+@keyframes stageIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+
+/* ========== 改进的阶段动画样式 ========== */
+.stage-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
+    padding: 6px 10px;
+    font-size: 12px;
+    border-left: 3px solid transparent;
+    border-radius: 0 8px 8px 0;
+    background: linear-gradient(90deg, transparent, transparent);
+    transition: all 0.3s ease;
+}
+
+.stage-item.stage-resonance {
+    border-left-color: var(--accent2);
+    background: linear-gradient(90deg, rgba(0,170,255,0.1), transparent);
+}
+
+.stage-item.stage-interference {
+    border-left-color: var(--accent);
+    background: linear-gradient(90deg, rgba(0,255,136,0.1), transparent);
+}
+
+.stage-item.stage-collapse {
+    border-left-color: var(--accent3);
+    background: linear-gradient(90deg, rgba(255,102,170,0.1), transparent);
+}
+
+/* 改进的技能节点动画 */
+.skill-node.processing {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+    background: rgba(0,255,136,0.15) !important;
+    animation: skillProcessing 0.8s ease infinite !important;
+}
+
+@keyframes skillProcessing {
+    0%, 100% { 
+        transform: scale(1); 
+        box-shadow: 0 0 0 rgba(0,255,136,0);
+    }
+    50% { 
+        transform: scale(1.15); 
+        box-shadow: 0 0 25px rgba(0,255,136,0.5);
+    }
+}
+
+/* 改进的状态指示器 */
+.status-dot.resonance {
+    background: var(--accent2);
+    box-shadow: 0 0 15px rgba(0,170,255,0.6);
+    animation: statusPulse 0.5s ease infinite;
+}
+
+.status-dot.interference {
+    background: var(--accent);
+    box-shadow: 0 0 15px rgba(0,255,136,0.6);
+    animation: statusPulse 0.7s ease infinite;
+}
+
+.status-dot.collapse {
+    background: var(--accent3);
+    box-shadow: 0 0 15px rgba(255,102,170,0.6);
+    animation: statusPulse 0.4s ease infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.8; }
+}
+
+.input-area { padding: 12px 16px; background: var(--bg2); border-top: 1px solid var(--border); display: flex; gap: 10px; align-items: center; }
+#msg-input { flex: 1; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 12px 18px; border-radius: 24px; font-size: 14px; outline: none; }
+#msg-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(0,255,136,0.1); }
+.send-btn { background: linear-gradient(135deg, var(--accent), #00cc6a); color: #000; border: none; padding: 12px 24px; border-radius: 24px; font-weight: 600; cursor: pointer; }
+.send-btn:disabled { background: var(--bg3); color: var(--text2); cursor: not-allowed; }
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span class="sidebar-title">📚 对话历史</span>
+      <button onclick="toggleSidebar()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;">✕</button>
+    </div>
+    <button class="new-chat-btn" onclick="newChat()">+ 新对话</button>
+  </div>
+  <div class="session-list" id="session-list">
+    <div style="padding:20px;text-align:center;color:var(--text2);font-size:13px;">暂无对话记录</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="header">
+    <div class="header-left">
+      <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+      <span class="title">⚛ Quantum Field</span>
+    </div>
+    <div class="status-container">
+      <div class="status-indicator">
+        <div class="status-dot ready" id="status-dot"></div>
+        <span class="status-text" id="status-text">就绪</span>
+      </div>
+      <button class="theme-btn" onclick="toggleTheme()" title="切换主题">
+        <span id="theme-icon">🌙</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="domain-selector">
+    <button class="domain-btn active" data-domain="">通用场</button>
+    <button class="domain-btn" data-domain="life">生活</button>
+    <button class="domain-btn" data-domain="office">办公</button>
+    <button class="domain-btn" data-domain="math">计算</button>
+  </div>
+
+  <div class="field-viz">
+    <span class="field-label">技能场</span>
+    <div id="skill-field" style="display:flex;gap:8px;"></div>
+  </div>
+
+  <div class="chat" id="chat-container">
+    <div class="message ai">
+      <div class="message-label">⚛ Quantum Field</div>
+      欢迎进入量子场！基于量子场架构的智能助手。<br><br>
+      <strong>使用方法：</strong><br>
+      输入消息，观察共振→干涉→坍缩的动态效果
+    </div>
+  </div>
+
+  <div class="input-area">
+    <input type="text" id="msg-input" placeholder="输入消息，按 Enter 发送..." autocomplete="off">
+    <button class="send-btn" id="send-btn" onclick="sendMessage()">发送</button>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:8001';
+let curSession = null;
+let curDomain = null;
+const userId = 'user_' + Date.now();
+let isSending = false;
+
+// 主题管理
+function initTheme() {
+  const saved = localStorage.getItem('theme') || 'dark';
+  document.body.dataset.theme = saved;
+  document.getElementById('theme-icon').textContent = saved === 'dark' ? '🌙' : '☀️';
+}
+
+function toggleTheme() {
+  const current = document.body.dataset.theme;
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.body.dataset.theme = next;
+  localStorage.setItem('theme', next);
+  document.getElementById('theme-icon').textContent = next === 'dark' ? '🌙' : '☀️';
+}
+
+// 侧边栏
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// 状态
+function setStatus(state, text) {
+  const dot = document.getElementById('status-dot');
+  const label = document.getElementById('status-text');
+  dot.className = 'status-dot ' + state;
+  label.textContent = text;
+}
+
+// 加载技能
+async function loadSkills() {
+  try {
+    const res = await fetch(API + '/skills');
+    const data = await res.json();
+    const container = document.getElementById('skill-field');
+    container.innerHTML = '';
+    data.skills.forEach(skill => {
+      const node = document.createElement('div');
+      node.className = 'skill-node';
+      node.id = 'skill-' + skill.name;
+      node.textContent = skill.name;
+      container.appendChild(node);
+    });
+  } catch(e) {
+    console.error('加载技能失败:', e);
+  }
+}
+
+// 添加消息
+function addMessage(role, html) {
+  const container = document.getElementById('chat-container');
+  const div = document.createElement('div');
+  div.className = 'message ' + role;
+  div.innerHTML = '<div class="message-label">' + (role === 'user' ? 'You' : '⚛ Field') + '</div>' + html;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+// 添加阶段动画
+function addStage(stage, skills, delay) {
+  setTimeout(() => {
+    const names = {
+      resonance: { color: 'var(--accent2)', name: '共振', icon: '◎' },
+      interference: { color: 'var(--accent)', name: '干涉', icon: '⇌' },
+      collapse: { color: 'var(--accent3)', name: '坍缩', icon: '◎' }
+    };
+    const info = names[stage] || { color: '#888', name: stage, icon: '•' };
+    
+    let skillHtml = '';
+    if (skills && skills.length > 0) {
+      skillHtml = '<span style="color:' + info.color + ';margin-left:8px;">[' + skills.join(',') + ']</span>';
+    }
+    
+    const item = document.createElement('div');
+    item.className = 'stage-item';
+    item.innerHTML = '<span style="color:' + info.color + '">' + info.icon + '</span><span style="color:' + info.color + ';font-weight:500;">' + info.name + '</span>' + skillHtml;
+    
+    const timeline = document.querySelector('.stage-timeline');
+    if (timeline) timeline.appendChild(item);
+    
+    // 技能节点动画
+    if (skills) {
+      skills.forEach(s => {
+        const node = document.getElementById('skill-' + s);
+        if (node) {
+          node.classList.remove('active', 'resonating');
+          void node.offsetWidth; // 触发重绘
+          if (stage === 'resonance') node.classList.add('resonating');
+          else node.classList.add('active');
+        }
+      });
+    }
+    
+    setStatus(stage, info.name);
+  }, delay);
+}
+
+// ========== 改进的阶段动画函数 ==========
+function addStageEnhanced(stage, skills, metadata) {
+  const names = {
+    resonance: { 
+      color: 'var(--accent2)', 
+      name: '共振', 
+      icon: '◎',
+      description: '技能选择中...'
+    },
+    interference: { 
+      color: 'var(--accent)', 
+      name: '干涉', 
+      icon: '⇌',
+      description: metadata.tools ? `处理 ${metadata.tools} 个工具` : '处理中...'
+    },
+    collapse: { 
+      color: 'var(--accent3)', 
+      name: '坍缩', 
+      icon: '◎',
+      description: skills.length > 0 ? `激活: ${skills.join(', ')}` : '生成回复...'
+    }
+  };
+  
+  const info = names[stage] || { color: '#888', name: stage, icon: '•', description: '' };
+  
+  const timeline = document.querySelector('.stage-timeline');
+  if (!timeline) return;
+  
+  // 检查是否已存在同阶段
+  const existing = timeline.querySelector('.stage-' + stage);
+  if (existing) return;
+  
+  // 创建阶段项
+  const item = document.createElement('div');
+  item.className = 'stage-item stage-' + stage;
+  item.innerHTML = `
+    <span style="color:${info.color};font-size:14px;">${info.icon}</span>
+    <span style="color:${info.color};font-weight:600;">${info.name}</span>
+    <span style="color:var(--text2);margin-left:8px;font-size:11px;">${info.description}</span>
+  `;
+  
+  // 添加技能标签
+  if (skills.length > 0) {
+    const skillsSpan = document.createElement('span');
+    skillsSpan.style.cssText = 'margin-left:auto;display:flex;gap:4px;';
+    skills.forEach((skill, index) => {
+      const tag = document.createElement('span');
+      tag.style.cssText = `
+        background: ${info.color}20;
+        color: ${info.color};
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 10px;
+        border: 1px solid ${info.color}40;
+      `;
+      tag.textContent = skill;
+      skillsSpan.appendChild(tag);
+    });
+    item.appendChild(skillsSpan);
+  }
+  
+  timeline.appendChild(item);
+  
+  // ========== 改进的技能节点动画 ==========
+  if (skills.length > 0) {
+    skills.forEach((skill, index) => {
+      const node = document.getElementById('skill-' + skill);
+      if (node) {
+        // 清除之前的状态
+        node.classList.remove('active', 'resonating', 'processing');
+        void node.offsetWidth; // 强制重绘
+        
+        // 根据阶段添加不同动画
+        if (stage === 'resonance') {
+          // 共振阶段：蓝色脉冲，快速闪烁
+          node.classList.add('resonating');
+          node.style.animationDelay = (index * 0.1) + 's';
+        } else if (stage === 'interference') {
+          // 干涉阶段：绿色脉冲，表示处理中
+          node.classList.add('processing');
+        } else if (stage === 'collapse') {
+          // 坍缩阶段：稳定高亮
+          node.classList.add('active');
+        }
+      }
+    });
+  }
+  
+  // 更新状态指示器
+  setStatus(stage, info.name);
+}
+
+// ========== 内容格式化函数 ==========
+function formatContent(text) {
+  return text
+    .replace(/\n/g, '<br>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code style="background:rgba(0,255,136,0.1);padding:2px 6px;border-radius:4px;font-family:monospace;">$1</code>');
+}
+
+// ========== 改进的发送消息函数 ==========
+async function sendMessage() {
+  const input = document.getElementById('msg-input');
+  const btn = document.getElementById('send-btn');
+  const msg = input.value.trim();
+  
+  if (!msg || isSending) return;
+  
+  isSending = true;
+  input.value = '';
+  btn.disabled = true;
+  
+  // 添加用户消息
+  addMessage('user', msg);
+  
+  // 清除之前的技能状态
+  document.querySelectorAll('.skill-node').forEach(n => {
+    n.classList.remove('active', 'resonating', 'processing');
+    n.style.animationDelay = '';
+  });
+  
+  try {
+    const res = await fetch(API + '/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: msg,
+        user_id: userId,
+        session_id: curSession,
+        domain_focus: curDomain
+      })
+    });
+    
+    // 创建AI消息容器
+    const aiDiv = document.createElement('div');
+    aiDiv.className = 'message ai';
+    aiDiv.innerHTML = '<div class="message-label">⚛ Field</div><span class="content"></span><div class="stage-timeline"></div>';
+    document.getElementById('chat-container').appendChild(aiDiv);
+    
+    const contentSpan = aiDiv.querySelector('.content');
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    
+    let buffer = '';
+    let fullText = '';
+    let shownStages = new Set();
+    
+    // 读取流
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      buffer += decoder.decode(value, { stream: true });
+      
+      // ========== 关键修复：改进的阶段解析 ==========
+      const stagePattern = /\|STAGE\|([^|]+)\|/g;
+      let match;
+      
+      while ((match = stagePattern.exec(buffer)) !== null) {
+        const fullMatch = match[0];
+        const stageName = match[1];
+        
+        // 查找完整阶段块
+        const startIdx = match.index;
+        let endIdx = buffer.indexOf('\n', startIdx);
+        if (endIdx < 0) endIdx = buffer.length;
+        
+        const stageBlock = buffer.substring(startIdx, endIdx);
+        
+        if (!shownStages.has(stageName)) {
+          shownStages.add(stageName);
+          
+          // 提取技能列表
+          let skills = [];
+          const skillsMatch = stageBlock.match(/\|skills\|([^|]+)\|/);
+          if (skillsMatch && skillsMatch[1] !== 'none' && skillsMatch[1] !== 'processing') {
+            skills = skillsMatch[1].split(',').filter(s => s && s !== 'processing');
+          }
+          
+          // 提取工具数量
+          const toolsMatch = stageBlock.match(/(\d+)\s*tools/i);
+          const toolsCount = toolsMatch ? toolsMatch[1] : null;
+          
+          // 提取模式
+          const modeMatch = stageBlock.match(/\|mode\|([^|]+)\|/);
+          const mode = modeMatch ? modeMatch[1] : null;
+          
+          // 触发改进的阶段动画
+          addStageEnhanced(stageName, skills, { tools: toolsCount, mode: mode });
+        }
+      }
+      
+      // ========== 关键修复：更完善的内容清理 ==========
+      let cleanContent = buffer
+        // 移除所有管道符标记及其参数
+        .replace(/\|[^|]+\|/g, ' ')
+        // 移除残留的关键词
+        .replace(/\b(complete|processing|none|skills|mode|field_density|entropy)\b/gi, '')
+        // 移除工具数量
+        .replace(/\d+\s*tools/gi, '')
+        // 移除数值参数
+        .replace(/\d+\.?\d*/g, '')
+        // 规范化空白
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      if (cleanContent && cleanContent.length > 0) {
+        fullText += cleanContent;
+        contentSpan.innerHTML = formatContent(fullText);
+        document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;
+        
+        // 清空buffer中已显示的内容
+        buffer = '';
+      }
+    }
+    
+    // 完成处理
+    setTimeout(() => {
+      setStatus('ready', '就绪');
+      aiDiv.querySelector('.message-label').innerHTML = '⚛ Field <span style="opacity:0.5;font-size:10px;">· 完成</span>';
+      
+      // 添加完成标记
+      const timeline = aiDiv.querySelector('.stage-timeline');
+      if (timeline && shownStages.has('collapse')) {
+        const completeItem = document.createElement('div');
+        completeItem.className = 'stage-item';
+        completeItem.style.cssText = 'margin-top:8px;color:var(--accent);font-size:11px;opacity:0.7;';
+        completeItem.innerHTML = '✓ 坍缩完成';
+        timeline.appendChild(completeItem);
+      }
+    }, 500);
+    
+  } catch(e) {
+    addMessage('ai', '❌ 错误: ' + e.message);
+    setStatus('ready', '就绪');
+  }
+  
+  isSending = false;
+  btn.disabled = false;
+}
+
+// 新对话
+function newChat() {
+  curSession = null;
+  document.getElementById('chat-container').innerHTML = `
+    <div class="message ai">
+      <div class="message-label">⚛ Quantum Field</div>
+      新对话已开启。
+    </div>
+  `;
+  toggleSidebar();
+}
+
+// 领域切换
+document.querySelectorAll('.domain-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.domain-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    curDomain = btn.dataset.domain || null;
+    addMessage('ai', curDomain ? '⚛ 已切换至 ' + curDomain + ' 高密度场' : '⚛ 返回通用场');
+  };
+});
+
+// 回车发送
+document.getElementById('msg-input').onkeypress = e => {
+  if (e.key === 'Enter') sendMessage();
+};
+
+// 初始化
+initTheme();
+loadSkills();
+</script>
+</body>
+</html>

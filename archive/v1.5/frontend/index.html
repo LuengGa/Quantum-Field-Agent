@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Quantum Field Agent - V1.5</title>
+<style>
+:root {
+  --bg: #050508;
+  --bg2: #0a0a12;
+  --bg3: #12121c;
+  --border: rgba(0,255,136,0.08);
+  --text: #e0e0e0;
+  --text2: #888;
+  --accent: #00ff88;
+  --accent2: #00aaff;
+  --accent3: #ff66aa;
+}
+
+[data-theme="light"] {
+  --bg: #f5f5f7;
+  --bg2: #ffffff;
+  --bg3: #f0f0f2;
+  --border: rgba(0,150,100,0.15);
+  --text: #1d1d1f;
+  --text2: #6e6e73;
+  --accent: #00a855;
+  --accent2: #007aff;
+  --accent3: #ff2d55;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+body { 
+  background: var(--bg); 
+  color: var(--text); 
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  display: flex;
+  height: 100vh;
+}
+
+/* 侧边栏 */
+.sidebar { 
+  width: 300px; 
+  background: var(--bg2); 
+  border-right: 1px solid var(--border); 
+  display: flex; 
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 1000;
+}
+.sidebar.open { transform: translateX(0); }
+.sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+.sidebar-title { font-size: 14px; font-weight: 600; color: var(--accent); }
+.new-chat-btn { 
+  width: 100%; 
+  margin-top: 12px; 
+  padding: 12px; 
+  background: var(--accent); 
+  color: #000; 
+  border: none; 
+  border-radius: 8px; 
+  font-weight: 600; 
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.new-chat-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,255,136,0.3); }
+
+/* 场状态信息 */
+.field-info { padding: 16px; border-bottom: 1px solid var(--border); }
+.field-info-title { font-size: 11px; color: var(--text2); text-transform: uppercase; margin-bottom: 8px; }
+.entropy-display { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.entropy-value { font-size: 13px; font-weight: 600; color: var(--accent); }
+.entropy-bar { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.entropy-fill { 
+  height: 100%; 
+  background: linear-gradient(90deg, var(--accent), var(--accent2)); 
+  width: 10%; 
+  transition: width 0.5s ease;
+}
+.entropy-label { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+/* 技能列表 */
+.skill-list { padding: 12px; }
+.skill-item { 
+  padding: 8px 12px; 
+  margin-bottom: 4px; 
+  border-radius: 6px; 
+  font-size: 12px; 
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+.skill-item:hover { background: rgba(0,255,136,0.05); }
+.skill-item.active { 
+  background: rgba(0,255,136,0.1); 
+  color: var(--accent);
+  border-left: 2px solid var(--accent);
+}
+.skill-dot { 
+  width: 6px; 
+  height: 6px; 
+  border-radius: 50%; 
+  background: #333; 
+  transition: all 0.3s;
+}
+.skill-item.active .skill-dot { 
+  background: var(--accent); 
+  box-shadow: 0 0 8px var(--accent);
+}
+
+/* 主内容区 */
+.main { 
+  flex: 1; 
+  display: flex; 
+  flex-direction: column; 
+  height: 100%; 
+  margin-left: 0;
+}
+@media(min-width:1024px) { 
+  .main { margin-left: 300px; } 
+  .sidebar { transform: translateX(0); position: relative; }
+}
+
+/* 头部 */
+.header { 
+  padding: 12px 16px; 
+  border-bottom: 1px solid var(--border); 
+  background: var(--bg2); 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center;
+}
+.menu-btn { 
+  background: none; 
+  border: 1px solid var(--border); 
+  color: var(--accent); 
+  font-size: 18px; 
+  width: 40px; 
+  height: 40px; 
+  border-radius: 8px; 
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.title { 
+  font-size: 16px; 
+  font-weight: bold; 
+  background: linear-gradient(90deg, var(--accent), var(--accent2)); 
+  -webkit-background-clip: text; 
+  -webkit-text-fill-color: transparent;
+}
+
+/* 状态指示器 */
+.status-container { display: flex; align-items: center; gap: 10px; }
+.status-badge { 
+  display: flex; 
+  align-items: center; 
+  gap: 6px; 
+  padding: 6px 12px; 
+  background: rgba(0,0,0,0.3); 
+  border-radius: 20px; 
+  border: 1px solid var(--border);
+  font-size: 11px; 
+  color: var(--text2);
+}
+[data-theme="light"] .status-badge { background: rgba(0,0,0,0.05); }
+
+.status-dot { 
+  width: 8px; 
+  height: 8px; 
+  border-radius: 50%; 
+  background: #333;
+  transition: all 0.3s;
+}
+
+/* 状态动画 */
+.status-dot.ready { 
+  background: var(--accent); 
+  box-shadow: 0 0 10px rgba(0,255,136,0.4);
+}
+
+.status-dot.resonance { 
+  background: var(--accent2); 
+  animation: statusPulse 0.6s infinite;
+}
+
+.status-dot.interference { 
+  background: var(--accent); 
+  animation: statusPulse 0.4s infinite;
+}
+
+.status-dot.collapse { 
+  background: var(--accent3); 
+  animation: statusPulse 0.3s infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.7; }
+}
+
+.theme-btn { 
+  background: none; 
+  border: 1px solid var(--border); 
+  color: var(--text2); 
+  padding: 8px 12px; 
+  border-radius: 8px; 
+  cursor: pointer; 
+  font-size: 12px;
+}
+
+/* 技能可视化 */
+.skill-viz { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  padding: 10px 16px; 
+  background: var(--bg2); 
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.skill-node { 
+  padding: 6px 14px; 
+  background: var(--bg3); 
+  border: 1px solid var(--border); 
+  border-radius: 18px; 
+  font-size: 11px; 
+  color: var(--text2);
+  white-space: nowrap;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 技能节点动画状态 */
+.skill-node.resonance { 
+  border-color: var(--accent2); 
+  color: var(--accent2);
+  animation: skillResonance 0.8s ease;
+}
+
+.skill-node.interference { 
+  border-color: var(--accent); 
+  color: var(--accent);
+  background: rgba(0,255,136,0.1);
+  box-shadow: 0 0 20px rgba(0,255,136,0.4);
+  animation: skillInterference 1s ease;
+}
+
+.skill-node.collapse { 
+  border-color: var(--accent3); 
+  color: var(--accent3);
+  animation: skillCollapse 0.6s ease;
+}
+
+/* 技能动画关键帧 */
+@keyframes skillResonance {
+  0% { transform: scale(1); box-shadow: 0 0 0 rgba(0,170,255,0); }
+  25% { transform: scale(1.2); box-shadow: 0 0 20px rgba(0,170,255,0.6); }
+  50% { transform: scale(1.1); }
+  75% { transform: scale(1.15); }
+  100% { transform: scale(1); box-shadow: 0 0 10px rgba(0,170,255,0.3); }
+}
+
+@keyframes skillInterference {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.25); box-shadow: 0 0 30px rgba(0,255,136,0.6); }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1.1); box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+}
+
+@keyframes skillCollapse {
+  0% { transform: scale(1.1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+/* 对话区 */
+.chat { 
+  flex: 1; 
+  overflow-y: auto; 
+  padding: 16px; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 12px;
+}
+
+.message { 
+  max-width: 80%; 
+  padding: 12px 16px; 
+  border-radius: 12px; 
+  line-height: 1.6; 
+  font-size: 14px;
+  animation: messageIn 0.3s ease;
+}
+
+@keyframes messageIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message.user { 
+  align-self: flex-end; 
+  background: var(--bg3); 
+  border: 1px solid var(--border);
+  border-bottom-right-radius: 4px;
+}
+
+.message.ai { 
+  align-self: flex-start; 
+  background: rgba(0,255,136,0.05); 
+  border: 1px solid rgba(0,255,136,0.2);
+  border-bottom-left-radius: 4px;
+}
+
+.message-label { font-size: 10px; opacity: 0.5; margin-bottom: 4px; }
+.message-content { white-space: pre-wrap; word-break: break-word; }
+
+/* 阶段时间线 */
+.stage-timeline {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stage-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  opacity: 0;
+  transform: translateX(-10px);
+  animation: stageIn 0.4s ease forwards;
+}
+
+.stage-item:nth-child(1) { animation-delay: 0s; }
+.stage-item:nth-child(2) { animation-delay: 0.3s; }
+.stage-item:nth-child(3) { animation-delay: 0.6s; }
+
+@keyframes stageIn {
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.stage-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.stage-item.resonance .stage-icon { background: var(--accent2); color: #000; }
+.stage-item.interference .stage-icon { background: var(--accent); color: #000; }
+.stage-item.collapse .stage-icon { background: var(--accent3); color: #fff; }
+
+/* 输入区 */
+.input-area { 
+  padding: 12px 16px; 
+  background: var(--bg2); 
+  border-top: 1px solid var(--border); 
+  display: flex; 
+  gap: 10px;
+}
+
+#msg-input { 
+  flex: 1; 
+  background: var(--bg3); 
+  border: 1px solid var(--border); 
+  color: var(--text); 
+  padding: 12px 18px; 
+  border-radius: 24px; 
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+#msg-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,255,136,0.1); }
+
+.send-btn { 
+  background: var(--accent); 
+  color: #000; 
+  border: none; 
+  padding: 12px 24px; 
+  border-radius: 24px; 
+  font-weight: 600; 
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.send-btn:hover:not(:disabled) { 
+  transform: translateY(-2px); 
+  box-shadow: 0 8px 20px rgba(0,255,136,0.3);
+}
+
+.send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 打字指示器 */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+}
+
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: typingBounce 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) { animation-delay: 0s; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-8px); }
+}
+
+@media(max-width:768px) { 
+  .main { margin-left: 0; }
+  .sidebar { width: 85%; max-width: 300px; }
+  .message { max-width: 90%; }
+}
+</style>
+</head>
+<body data-theme="dark">
+
+<!-- 侧边栏 -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span class="sidebar-title">⚛ Quantum Field</span>
+      <button onclick="toggleSidebar()" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <button class="new-chat-btn" onclick="newChat()">+ 新对话</button>
+  </div>
+  
+  <div class="field-info">
+    <div class="field-info-title">场状态监控</div>
+    <div class="entropy-display">
+      <span>场熵 (复杂度)</span>
+      <span class="entropy-value" id="entropy-value">0.10</span>
+    </div>
+    <div class="entropy-bar">
+      <div class="entropy-fill" id="entropy-bar" style="width:10%"></div>
+    </div>
+    <div class="entropy-label" id="entropy-label">低熵场 - 本地处理</div>
+  </div>
+  
+  <div class="skill-list" id="skill-list">
+    <!-- 技能列表动态生成 -->
+  </div>
+</div>
+
+<!-- 主内容 -->
+<div class="main">
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+      <span class="title">V1.5 分布式量子场</span>
+    </div>
+    <div class="status-container">
+      <div class="status-badge">
+        <div class="status-dot ready" id="status-dot"></div>
+        <span id="status-text">就绪</span>
+      </div>
+      <button class="theme-btn" onclick="toggleTheme()">🌙</button>
+    </div>
+  </div>
+
+  <div class="skill-viz" id="skill-viz">
+    <span style="font-size:11px;color:var(--text2)">量子场:</span>
+    <!-- 技能节点动态生成 -->
+  </div>
+
+  <div class="chat" id="chat">
+    <div class="message ai">
+      <div class="message-label">⚛ Quantum Field V1.5</div>
+      <div class="message-content">欢迎使用分布式量子场架构！
+
+🚀 核心特性:
+• 共振 → 干涉 → 坍缩 三阶段可视化
+• 场熵自动路由（低熵本地/高熵分布式）
+• 实时技能节点动画
+• Redis集群状态同步
+
+输入消息开始体验...</div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <input type="text" id="msg-input" placeholder="输入消息，观察量子场坍缩过程..." autocomplete="off">
+    <button class="send-btn" id="send-btn" onclick="send()">坍缩</button>
+  </div>
+</div>
+
+<script>
+// ============ 配置 ============
+const API = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+const userId = 'user_' + Math.random().toString(36).substr(2, 9);
+let isSending = false;
+let currentStage = 'ready';
+
+// ============ 主题切换 ============
+function initTheme() {
+  const saved = localStorage.getItem('theme') || 'dark';
+  document.body.dataset.theme = saved;
+}
+
+function toggleTheme() {
+  const current = document.body.dataset.theme;
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.body.dataset.theme = next;
+  localStorage.setItem('theme', next);
+  document.querySelector('.theme-btn').textContent = next === 'dark' ? '🌙' : '☀️';
+}
+
+// ============ UI控制 ============
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+function setStatus(stage, text) {
+  currentStage = stage;
+  const dot = document.getElementById('status-dot');
+  const label = document.getElementById('status-text');
+  dot.className = 'status-dot ' + stage;
+  label.textContent = text;
+}
+
+function updateEntropy(value) {
+  const percentage = Math.min(100, Math.max(0, value * 100));
+  document.getElementById('entropy-value').textContent = value.toFixed(2);
+  document.getElementById('entropy-bar').style.width = percentage + '%';
+  document.getElementById('entropy-label').textContent = 
+    value > 0.8 ? '高熵场 - 分布式计算' : '低熵场 - 本地处理';
+  
+  // 高熵时改变颜色
+  const bar = document.getElementById('entropy-bar');
+  if (value > 0.8) {
+    bar.style.background = 'linear-gradient(90deg, var(--accent3), var(--accent2))';
+  } else {
+    bar.style.background = 'linear-gradient(90deg, var(--accent), var(--accent2))';
+  }
+}
+
+// ============ 技能管理 ============
+const skills = [
+  { name: 'websearch', label: '搜索', domain: 'general' },
+  { name: 'calculate', label: '计算', domain: 'math' },
+  { name: 'translate', label: '翻译', domain: 'office' },
+  { name: 'summarize', label: '总结', domain: 'office' },
+  { name: 'solve_equation', label: '解方程', domain: 'math' },
+  { name: 'get_recommendation', label: '推荐', domain: 'life' }
+];
+
+function initSkills() {
+  // 侧边栏技能列表
+  const listContainer = document.getElementById('skill-list');
+  listContainer.innerHTML = '<div class="field-info-title" style="margin-bottom:8px">可用技能</div>';
+  skills.forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'skill-item';
+    item.id = 'skill-list-' + s.name;
+    item.innerHTML = `<div class="skill-dot"></div><span>${s.label}</span>`;
+    listContainer.appendChild(item);
+  });
+  
+  // 顶部技能节点
+  const vizContainer = document.getElementById('skill-viz');
+  skills.forEach(s => {
+    const node = document.createElement('div');
+    node.className = 'skill-node';
+    node.id = 'skill-viz-' + s.name;
+    node.textContent = s.label;
+    vizContainer.appendChild(node);
+  });
+}
+
+function activateSkill(skillName, stage) {
+  // 激活侧边栏技能
+  const listItem = document.getElementById('skill-list-' + skillName);
+  if (listItem) {
+    listItem.classList.add('active');
+    setTimeout(() => listItem.classList.remove('active'), 2000);
+  }
+  
+  // 激活顶部节点动画
+  const vizNode = document.getElementById('skill-viz-' + skillName);
+  if (vizNode) {
+    // 清除之前的状态
+    vizNode.classList.remove('resonance', 'interference', 'collapse');
+    // 强制重绘
+    void vizNode.offsetWidth;
+    // 添加新状态
+    vizNode.classList.add(stage);
+  }
+}
+
+function resetSkills() {
+  document.querySelectorAll('.skill-node').forEach(node => {
+    node.classList.remove('resonance', 'interference', 'collapse');
+  });
+}
+
+// ============ 消息处理 ============
+function addMessage(role, content) {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'message ' + role;
+  div.innerHTML = `
+    <div class="message-label">${role === 'user' ? 'You' : '⚛ Field'}</div>
+    <div class="message-content">${escapeHtml(content)}</div>
+  `;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ============ 核心：发送消息 ============
+async function send() {
+  const input = document.getElementById('msg-input');
+  const btn = document.getElementById('send-btn');
+  const msg = input.value.trim();
+  
+  if (!msg || isSending) return;
+  
+  isSending = true;
+  input.value = '';
+  btn.disabled = true;
+  
+  // 重置所有技能状态
+  resetSkills();
+  
+  // 添加用户消息
+  addMessage('user', msg);
+  
+  // 创建AI消息容器
+  const aiDiv = document.createElement('div');
+  aiDiv.className = 'message ai';
+  aiDiv.innerHTML = `
+    <div class="message-label">⚛ Field</div>
+    <div class="message-content" id="current-content"></div>
+    <div class="stage-timeline" id="stage-timeline"></div>
+  `;
+  document.getElementById('chat').appendChild(aiDiv);
+  
+  const contentDiv = document.getElementById('current-content');
+  const timelineDiv = document.getElementById('stage-timeline');
+  
+  // 记录已显示的阶段和技能
+  const shownStages = new Set();
+  const activatedSkills = [];
+  let fullContent = '';
+  
+  try {
+    const response = await fetch(API + '/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, user_id: userId, session_id: 'session_1' })
+    });
+    
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      buffer += decoder.decode(value, { stream: true });
+      
+      // 解析数据行
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // 保留不完整行
+      
+      for (const line of lines) {
+        processLine(line, shownStages, activatedSkills, contentDiv, timelineDiv);
+      }
+    }
+    
+    // 处理剩余缓冲
+    if (buffer) {
+      processLine(buffer, shownStages, activatedSkills, contentDiv, timelineDiv);
+    }
+    
+    // 完成
+    setStatus('ready', '就绪');
+    
+    // 延迟更新场状态
+    setTimeout(() => loadFieldStatus(), 1000);
+    
+  } catch (e) {
+    contentDiv.textContent = '❌ 错误: ' + e.message;
+    setStatus('ready', '就绪');
+  }
+  
+  isSending = false;
+  btn.disabled = false;
+}
+
+function processLine(line, shownStages, activatedSkills, contentDiv, timelineDiv) {
+  if (!line.trim()) return;
+  
+  // 检查阶段标记 - 改进匹配逻辑
+  const stageMatch = line.match(/\|STAGE\|(\w+)\|/);
+  if (stageMatch) {
+    const stage = stageMatch[1];
+    
+    // 提取技能
+    const skillsMatch = line.match(/skills\|([^|]*)\|/);
+    if (skillsMatch) {
+      const skillsStr = skillsMatch[1];
+      if (skillsStr && skillsStr !== 'none') {
+        const newSkills = skillsStr.split(',').filter(s => s);
+        newSkills.forEach(s => {
+          if (!activatedSkills.includes(s)) {
+            activatedSkills.push(s);
+          }
+        });
+      }
+    }
+    
+    // 显示阶段（每个阶段只显示一次）
+    if (!shownStages.has(stage)) {
+      shownStages.add(stage);
+      showStage(stage, activatedSkills, timelineDiv);
+      
+      // 激活对应技能动画
+      if (activatedSkills.length > 0) {
+        activatedSkills.forEach(skill => activateSkill(skill, stage));
+      }
+    }
+    
+    return; // 阶段行不显示在内容中
+  }
+  
+  // 清理内容中的标记
+  let cleanLine = line
+    .replace(/\|STAGE\|[^\n]*/g, '')
+    .replace(/complete|processing/gi, '')
+    .replace(/\d+\s*tools/gi, '')
+    .replace(/field_density\|\d+/g, '')
+    .replace(/^\|+/, '')
+    .trim();
+  
+  if (cleanLine && cleanLine !== '|') {
+    fullContent += cleanLine + ' ';
+    contentDiv.textContent = fullContent.trim();
+    document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+  }
+}
+
+function showStage(stage, skills, container) {
+  const stageConfig = {
+    resonance: { icon: '◎', name: '共振', class: 'resonance', color: 'var(--accent2)' },
+    interference: { icon: '⇌', name: '干涉', class: 'interference', color: 'var(--accent)' },
+    collapse: { icon: '◉', name: '坍缩', class: 'collapse', color: 'var(--accent3)' }
+  };
+  
+  const config = stageConfig[stage];
+  if (!config) return;
+  
+  // 更新状态指示器
+  setStatus(stage, config.name + '中...');
+  
+  // 添加阶段项到时间线
+  const item = document.createElement('div');
+  item.className = 'stage-item ' + config.class;
+  item.innerHTML = `
+    <div class="stage-icon">${config.icon}</div>
+    <span style="color:${config.color};font-weight:500">${config.name}</span>
+    ${skills.length > 0 ? '<span style="color:var(--text2);margin-left:8px">[' + skills.join(', ') + ']</span>' : ''}
+  `;
+  container.appendChild(item);
+}
+
+// ============ 加载场状态 ============
+async function loadFieldStatus() {
+  try {
+    const res = await fetch(`${API}/field/status/${userId}`);
+    if (res.ok) {
+      const data = await res.json();
+      updateEntropy(data.entropy);
+    }
+  } catch (e) {
+    console.log('场状态加载失败:', e);
+  }
+}
+
+function newChat() {
+  document.getElementById('chat').innerHTML = `
+    <div class="message ai">
+      <div class="message-label">⚛ Field</div>
+      <div class="message-content">新对话已开启。量子场已重置为基态。</div>
+    </div>
+  `;
+  resetSkills();
+  updateEntropy(0.1);
+  toggleSidebar();
+}
+
+// ============ 初始化 ============
+document.getElementById('msg-input').onkeypress = e => {
+  if (e.key === 'Enter') send();
+};
+
+initTheme();
+initSkills();
+loadFieldStatus();
+
+// 定期刷新场状态
+setInterval(loadFieldStatus, 30000);
+
+console.log('✅ Quantum Field Agent V1.5 前端已加载');
+console.log('📡 API地址:', API);
+console.log('👤 用户ID:', userId);
+</script>
+
+</body>
+</html>

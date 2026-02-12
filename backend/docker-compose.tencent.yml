@@ -1,0 +1,182 @@
+# Tencent Cloud Production Configuration
+# ====================================
+
+version: '3.8'
+
+services:
+  # 主应用
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${REGISTRY_URL:-quantum-field-agent}:${TAG:-latest}
+    container_name: quantum-field-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # 数据库配置
+      - DATABASE_TYPE=${DATABASE_TYPE:-sqlite}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///data/evolution.db}
+      
+      # Redis配置
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      
+      # 安全配置
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      
+      # 日志配置
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=json
+      
+      # 腾讯云配置
+      - TENCENT_CLOUD_REGION=${TENCENT_CLOUD_REGION:-ap-shanghai}
+      - TENCENT_CLOUD_SECRET_ID=${TENCENT_CLOUD_SECRET_ID:-}
+      - TENCENT_CLOUD_SECRET_KEY=${TENCENT_CLOUD_SECRET_KEY:-}
+      
+    volumes:
+      - app_data:/app/data
+      - app_logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - app-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Nginx反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: quantum-field-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - nginx_cache:/var/cache/nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis缓存 (可选)
+  redis:
+    image: redis:7-alpine
+    container_name: quantum-field-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # 监控 - Prometheus
+  prometheus:
+    image: prom/prometheus:v2.45
+    container_name: quantum-field-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # 监控 - Grafana
+  grafana:
+    image: grafana/grafana:10
+    container_name: quantum-field-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    restart: unless-stopped
+    networks:
+      - app-network
+    depends_on:
+      - prometheus
+
+  # 日志收集 - Loki
+  loki:
+    image: grafana/loki:2.8
+    container_name: quantum-field-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # 日志收集 - Promtail
+  promtail:
+    image: grafana/promtail:2.8
+    container_name: quantum-field-promtail
+    volumes:
+      - ./logs:/var/log/app:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    networks:
+      - app-network
+    depends_on:
+      - loki
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  app_data:
+    driver: local
+  app_logs:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  nginx_cache:
+    driver: local
+  loki_data:
+    driver: local
+
+# 腾讯云CVM自动扩展配置
+# 在腾讯云控制台配置：
+# 1. 弹性伸缩 - 创建伸缩组
+# 2. 配置策略 - CPU>70% 扩容
+# 3. 配置CVM镜像 - 基于当前实例创建

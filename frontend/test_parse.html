@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Parse Test</title>
+<style>
+body{font-family:monospace;padding:20px;background:#1a1a1a;color:#0f0}
+.test{margin:20px 0;padding:10px;background:#2a2a2a;border-radius:5px}
+.input{color:#888;white-space:pre-wrap;word-break:break-all}
+.output{color:#0f0;margin-top:10px}
+.error{color:#f00}
+</style>
+</head>
+<body>
+<h2>前端解析逻辑测试</h2>
+<div id="tests"></div>
+
+<script>
+const testData = `|STAGE|resonance|skills|websearch|field_density|8|
+|STAGE|interference|processing|1 tools|
+网络搜索暂时不可用。|STAGE|collapse|complete|full_content_length|379|`;
+
+function testParse(name, data) {
+    const container = document.getElementById('tests');
+    const div = document.createElement('div');
+    div.className = 'test';
+    
+    let buf = data;
+    let stages = [];
+    let skills = [];
+    let full = '';
+    let shown = {resonance:false, interference:false, collapse:false};
+    
+    try {
+        while(true) {
+            let idx = buf.indexOf('|STAGE|');
+            if(idx < 0) {
+                full += buf;
+                break;
+            }
+            
+            if(idx > 0) {
+                full += buf.substring(0, idx);
+            }
+            
+            let endIdx = buf.indexOf('|', idx + 7);
+            if(endIdx < 0) break;
+            
+            let stageBlock = buf.substring(idx, endIdx + 1);
+            buf = buf.substring(endIdx + 1);
+            
+            let stageMatch = stageBlock.match(/\|STAGE\|(\w+)\|/);
+            if(stageMatch) {
+                let stage = stageMatch[1];
+                stages.push(stage);
+                
+                if(stageBlock.includes('|skills|')) {
+                    let sIdx = stageBlock.indexOf('|skills|') + 8;
+                    let eIdx = stageBlock.indexOf('|', sIdx);
+                    if(eIdx > sIdx) {
+                        let p2 = stageBlock.substring(sIdx, eIdx);
+                        if(p2 && p2 !== 'none') {
+                            skills = p2.split(',').filter(x => x);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Clean
+        full = full.replace(/\|STAGE\|[^|]*\|/g, '')
+                   .replace(/complete|processing/gi, '')
+                   .replace(/\d+\s*tools/gi, '')
+                   .replace(/field_density\|\d+/g, '')
+                   .replace(/[{}]/g, '')
+                   .replace(/\s+/g, ' ')
+                   .trim();
+        
+        div.innerHTML = `
+            <div style="color:#0ff;font-weight:bold">${name}</div>
+            <div class="input">输入: ${data.substring(0, 200)}...</div>
+            <div class="output">
+                ✅ 成功<br>
+                阶段: ${stages.join(', ')}<br>
+                技能: ${skills.join(', ') || '无'}<br>
+                内容: ${full.substring(0, 100)}...
+            </div>
+        `;
+    } catch(e) {
+        div.innerHTML = `
+            <div style="color:#0ff;font-weight:bold">${name}</div>
+            <div class="input">输入: ${data.substring(0, 200)}...</div>
+            <div class="error">❌ 错误: ${e.message}</div>
+        `;
+    }
+    
+    container.appendChild(div);
+}
+
+// 运行测试
+testParse('测试1: 正常数据', testData);
+testParse('测试2: 简单计算', '|STAGE|resonance|skills|calculate|field_density|8|\n|STAGE|interference|processing|1 tools|\n100|STAGE|collapse|complete|full_content_length|3|');
+testParse('测试3: 无工具', '|STAGE|resonance|skills|none|field_density|8|\n|STAGE|interference|none|\nHello|STAGE|collapse|complete|full_content_length|5|');
+</script>
+</body>
+</html>

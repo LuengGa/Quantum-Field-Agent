@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  # Redis集群（主从+哨兵，生产环境建议用Redis Cluster模式）
+  redis-master:
+    image: redis:7-alpine
+    container_name: qf-redis
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - qf-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # API Gateway（可横向扩展多个实例）
+  api-node-1:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: qf-api-1
+    environment:
+      - REDIS_URL=redis://redis-master:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - MODEL_NAME=${MODEL_NAME:-gpt-4o-mini}
+      - ENABLE_WORKER=true
+      - PORT=8000
+    ports:
+      - "8001:8000"
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    networks:
+      - qf-network
+    restart: unless-stopped
+
+  api-node-2:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: qf-api-2
+    environment:
+      - REDIS_URL=redis://redis-master:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - MODEL_NAME=${MODEL_NAME:-gpt-4o-mini}
+      - ENABLE_WORKER=true
+      - PORT=8000
+    ports:
+      - "8002:8000"
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    networks:
+      - qf-network
+    restart: unless-stopped
+
+  # Nginx负载均衡
+  nginx:
+    image: nginx:alpine
+    container_name: qf-nginx
+    ports:
+      - "8000:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend:/usr/share/nginx/html/frontend:ro
+    depends_on:
+      - api-node-1
+      - api-node-2
+    networks:
+      - qf-network
+    restart: unless-stopped
+
+  # 可选：专用高算力Worker（GPU节点）
+  # 启用方式：docker-compose --profile gpu up -d
+  compute-worker-1:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: qf-worker-1
+    environment:
+      - REDIS_URL=redis://redis-master:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - WORKER_MODEL_NAME=${WORKER_MODEL_NAME:-gpt-4o}
+      - ENABLE_WORKER=true
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    networks:
+      - qf-network
+    restart: unless-stopped
+    profiles:
+      - gpu
+
+volumes:
+  redis-data:
+    driver: local
+
+networks:
+  qf-network:
+    driver: bridge
