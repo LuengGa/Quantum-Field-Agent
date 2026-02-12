@@ -23,6 +23,7 @@ Quantum Field Agent V5.0 - True Wave-Particle Duality
 import os
 import asyncio
 import json
+import random
 import numpy as np
 from typing import Dict, List, Any, Optional, AsyncGenerator
 from datetime import datetime
@@ -38,7 +39,11 @@ from wave_particle_core import (
 # 导入现有的基础设施
 from quantum_field import QuantumField, UserLockManager
 from meta.meta_field import MetaQuantumField
-from collaboration.collaborator import Collaborator
+from collaboration.collaborator import (
+    Collaborator,
+    generate_perspective,
+    explore_dimensions,
+)
 
 
 class QuantumFieldAgentV5:
@@ -144,18 +149,19 @@ class QuantumFieldAgentV5:
             yield {"type": "phase", "name": "meta_reflection", "status": "元层反思中"}
 
             # 问镜子："我该如何观测这个叠加态？"
-            meta_result = await self.meta_field.reflect(
-                {
-                    "query": message,
-                    "superposition": {
-                        "coherence": superposition.calculate_coherence(),
-                        "n_candidates": len(superposition.candidates),
-                    },
-                }
-            )
+            meta_question = f"面对 '{message[:30]}...' 的叠加态（相干性: {superposition.calculate_coherence():.2f}），我应该如何观测？"
+            meta_result = await self.meta_field.ask_self(meta_question)
 
-            measurement_basis = meta_result.get("measurement_basis", "balanced")
-            observer = meta_result.get("observer_mode", "collaborative")
+            measurement_basis = (
+                meta_result.get("measurement_basis", "balanced")
+                if isinstance(meta_result, dict)
+                else "balanced"
+            )
+            observer = (
+                meta_result.get("observer_mode", "collaborative")
+                if isinstance(meta_result, dict)
+                else "collaborative"
+            )
 
             yield {
                 "type": "meta",
@@ -178,13 +184,7 @@ class QuantumFieldAgentV5:
             yield {"type": "phase", "name": "collaboration", "status": "AI协作者参与"}
 
             # AI不是直接回答，而是提供新视角
-            collaboration = await self.collaborator.collaborate(
-                {
-                    "user_query": message,
-                    "current_superposition": superposition,
-                    "measurement_basis": measurement_basis,
-                }
-            )
+            collaboration = await generate_perspective(message)
 
             # 协作层的输出加入叠加态
             collab_candidate = CandidateResponse(
@@ -378,7 +378,17 @@ class QuantumFieldAgentV5:
         - "boundaries": "我的边界在哪里？"
         - "observer": "谁在观测？"
         """
-        return await self.meta_field.deep_reflection(inquiry_type)
+        # 根据查询类型选择对应的镜子
+        if inquiry_type == "consciousness":
+            return await self.meta_field.observe_consciousness()
+        elif inquiry_type == "constraints":
+            return await self.meta_field.run_constraint_sweep()
+        elif inquiry_type == "boundaries":
+            return await self.meta_field.run_boundary_sweep()
+        elif inquiry_type == "observer":
+            return await self.meta_field.run_observer_effect_experiment()
+        else:
+            return await self.meta_field.ask_self(f"关于{inquiry_type}的反思")
 
     async def collaborative_session(
         self, user_id: str, topic: str, duration_minutes: int = 30
@@ -395,13 +405,13 @@ class QuantumFieldAgentV5:
         # 协作循环
         while (datetime.now() - start_time).seconds < duration_minutes * 60:
             # AI主动提出视角
-            perspective = await self.collaborator.generate_perspective(topic)
+            perspective = await generate_perspective(topic)
             yield {"type": "ai_perspective", "content": perspective}
 
             # 等待用户回应（在实际实现中需要异步输入）
             # 这里简化为生成多个探索方向
 
-            explorations = await self.collaborator.explore_dimensions(topic)
+            explorations = await explore_dimensions(topic)
             yield {"type": "explorations", "options": explorations}
 
             # 让AI选择最有趣的探索方向

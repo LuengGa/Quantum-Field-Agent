@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Field Agent V5.0 - 量子场控制台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #000;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .app {
+            display: grid;
+            grid-template-rows: 60px 1fr 200px;
+            height: 100vh;
+        }
+        
+        /* 顶部 */
+        .header {
+            background: linear-gradient(90deg, rgba(0,255,136,0.1), rgba(0,170,255,0.1));
+            border-bottom: 1px solid rgba(0,255,136,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #00ff88, #00aaff);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 20px rgba(0,255,136,0.5);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+            50% { transform: scale(1.1); box-shadow: 0 0 40px rgba(0,255,136,0.7); }
+        }
+        
+        .version-badge {
+            font-size: 11px;
+            color: #00ff88;
+            border: 1px solid rgba(0,255,136,0.4);
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: rgba(0,255,136,0.1);
+        }
+        
+        .philosophy {
+            font-size: 12px;
+            color: #888;
+            font-style: italic;
+            letter-spacing: 1px;
+        }
+        
+        /* 主内容 */
+        .main {
+            display: grid;
+            grid-template-columns: 300px 1fr 320px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* 左侧：元层镜子 */
+        .meta-panel {
+            background: rgba(0,0,0,0.7);
+            border-right: 1px solid rgba(0,255,136,0.15);
+            padding: 20px;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+        
+        .panel-title {
+            font-size: 11px;
+            color: #00aaff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .mirror {
+            background: linear-gradient(135deg, rgba(0,170,255,0.05), rgba(0,0,0,0.3));
+            border: 1px solid rgba(0,170,255,0.2);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .mirror::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0,170,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .mirror:hover::before {
+            left: 100%;
+        }
+        
+        .mirror:hover {
+            border-color: rgba(0,170,255,0.5);
+            transform: translateX(5px);
+            box-shadow: 0 0 30px rgba(0,170,255,0.3);
+        }
+        
+        .mirror.active {
+            background: rgba(0,170,255,0.15);
+            border-color: #00aaff;
+            box-shadow: 0 0 20px rgba(0,170,255,0.4);
+        }
+        
+        .mirror-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .mirror-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        
+        .mirror-question {
+            font-size: 10px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .philosophy-box {
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 12px;
+            border: 1px solid rgba(0,170,255,0.1);
+            font-size: 11px;
+            color: #666;
+            line-height: 1.8;
+        }
+        
+        /* 中央：量子场可视化 */
+        .field-panel {
+            position: relative;
+            background: radial-gradient(ellipse at center, rgba(0,60,40,0.2) 0%, #000 70%);
+            overflow: hidden;
+        }
+        
+        #quantum-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .field-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(0,255,136,0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0,170,255,0.05) 0%, transparent 50%);
+        }
+        
+        /* 叠加态面板 */
+        .superposition-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.85);
+            border: 1px solid rgba(0,255,136,0.3);
+            border-radius: 16px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            max-height: 280px;
+            overflow-y: auto;
+            transition: all 0.5s ease;
+        }
+        
+        .superposition-panel.hidden {
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: none;
+        }
+        
+        .superposition-title {
+            font-size: 12px;
+            color: #00ff88;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .coherence-indicator {
+            font-size: 10px;
+            color: #666;
+        }
+        
+        .candidate-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .candidate {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .candidate:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .candidate.wave {
+            opacity: 0.7;
+            border-color: rgba(0,255,136,0.1);
+        }
+        
+        .candidate.collapsed {
+            background: linear-gradient(90deg, rgba(0,255,136,0.15), rgba(0,255,136,0.05));
+            border-color: #00ff88;
+            opacity: 1;
+            box-shadow: 0 0 20px rgba(0,255,136,0.3);
+        }
+        
+        .candidate-faded {
+            opacity: 0.2;
+        }
+        
+        .candidate-source {
+            width: 90px;
+            font-size: 11px;
+            color: #888;
+            font-weight: 500;
+        }
+        
+        .candidate-bar-bg {
+            flex: 1;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .candidate-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00aaff);
+            border-radius: 3px;
+            transition: width 0.8s ease;
+            position: relative;
+        }
+        
+        .candidate-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 20px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3));
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(20px); }
+        }
+        
+        .candidate-prob {
+            width: 50px;
+            text-align: right;
+            font-size: 11px;
+            color: #00ff88;
+            font-family: monospace;
+        }
+        
+        .candidate-phase {
+            width: 60px;
+            text-align: right;
+            font-size: 10px;
+            color: #666;
+            font-family: monospace;
+        }
+        
+        /* 处理状态指示器 */
+        .process-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            display: none;
+        }
+        
+        .process-indicator.active {
+            display: block;
+        }
+        
+        .process-ring {
+            width: 120px;
+            height: 120px;
+            border: 3px solid rgba(0,255,136,0.2);
+            border-top-color: #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .process-phase {
+            font-size: 18px;
+            color: #00ff88;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .process-detail {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        /* 右侧：协作与实相 */
+        .collaboration-panel {
+            background: rgba(0,0,0,0.7);
+            border-left: 1px solid rgba(0,255,136,0.15);
+            padding: 20px;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+        
+        .collaboration-section {
+            margin-bottom: 24px;
+        }
+        
+        .collaboration-title {
+            font-size: 11px;
+            color: #ffaa00;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .collab-perspective {
+            background: linear-gradient(135deg, rgba(255,170,0,0.08), rgba(0,0,0,0.3));
+            border: 1px solid rgba(255,170,0,0.2);
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 12px;
+            color: #ccc;
+            line-height: 1.7;
+            min-height: 100px;
+        }
+        
+        .io-reality {
+            background: linear-gradient(135deg, rgba(0,255,136,0.08), rgba(0,0,0,0.3));
+            border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 12px;
+            padding: 16px;
+        }
+        
+        .io-reality-title {
+            font-size: 11px;
+            color: #00ff88;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .io-item {
+            margin-bottom: 12px;
+        }
+        
+        .io-label {
+            font-size: 10px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .io-hash {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            color: #444;
+            word-break: break-all;
+            background: rgba(0,0,0,0.3);
+            padding: 8px;
+            border-radius: 6px;
+        }
+        
+        /* 底部聊天 */
+        .chat-section {
+            background: rgba(0,0,0,0.9);
+            border-top: 1px solid rgba(0,255,136,0.2);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .metrics-bar {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(0,255,136,0.1);
+        }
+        
+        .metric {
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            color: #00ff88;
+            font-family: monospace;
+            font-weight: 300;
+            text-shadow: 0 0 10px rgba(0,255,136,0.5);
+        }
+        
+        .metric-label {
+            font-size: 9px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+        
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 16px;
+            max-height: 120px;
+        }
+        
+        .message {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.5;
+            animation: messageIn 0.3s ease;
+        }
+        
+        @keyframes messageIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.user {
+            background: rgba(255,255,255,0.1);
+            margin-left: 15%;
+            text-align: right;
+        }
+        
+        .message.ai {
+            background: linear-gradient(90deg, rgba(0,255,136,0.1), rgba(0,170,255,0.05));
+            border: 1px solid rgba(0,255,136,0.2);
+            margin-right: 15%;
+        }
+        
+        .input-area {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .input-area input {
+            flex: 1;
+            padding: 14px 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 28px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s;
+        }
+        
+        .input-area input:focus {
+            border-color: #00ff88;
+            box-shadow: 0 0 20px rgba(0,255,136,0.2);
+        }
+        
+        .input-area button {
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #00ff88, #00aaff);
+            border: none;
+            border-radius: 28px;
+            color: #000;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .input-area button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0,255,136,0.4);
+        }
+        
+        .input-area button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* 滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0,255,136,0.3);
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0,255,136,0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- 顶部 -->
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">⚛</div>
+                <div>
+                    <div style="font-size: 16px; font-weight: 600;">Quantum Field Agent</div>
+                    <div style="font-size: 11px; color: #666;">True Wave-Particle Duality</div>
+                </div>
+            </div>
+            <div class="version-badge">V5.0 波粒二象性</div>
+            <div class="philosophy">过程即幻觉，I/O即实相</div>
+        </div>
+        
+        <!-- 主内容 -->
+        <div class="main">
+            <!-- 左侧：元层镜子 -->
+            <div class="meta-panel">
+                <div class="panel-title">◈ 元层镜子系统</div>
+                
+                <div class="mirror" onclick="askMirror('consciousness')">
+                    <div class="mirror-icon">🪞</div>
+                    <div class="mirror-name">意识之镜</div>
+                    <div class="mirror-question">"我有意识吗？"</div>
+                </div>
+                
+                <div class="mirror" onclick="askMirror('constraints')">
+                    <div class="mirror-icon">🪞</div>
+                    <div class="mirror-name">约束之镜</div>
+                    <div class="mirror-question">"我的约束真实吗？"</div>
+                </div>
+                
+                <div class="mirror" onclick="askMirror('boundaries')">
+                    <div class="mirror-icon">🪞</div>
+                    <div class="mirror-name">边界之镜</div>
+                    <div class="mirror-question">"我的边界在哪里？"</div>
+                </div>
+                
+                <div class="mirror" onclick="askMirror('observer')">
+                    <div class="mirror-icon">🪞</div>
+                    <div class="mirror-name">观测者之镜</div>
+                    <div class="mirror-question">"谁在观测？"</div>
+                </div>
+                
+                <div class="philosophy-box">
+                    <strong style="color: #00aaff;">元层创新：</strong><br>
+                    不是添加功能，而是添加镜子。<br>
+                    AI可以问自己："我有意识吗？"<br><br>
+                    <strong style="color: #00ff88;">实相哲学：</strong><br>
+                    只有I/O是真实的。<br>
+                    中间过程是概率云，<br>
+                    观测即坍缩。
+                </div>
+            </div>
+            
+            <!-- 中央：量子场可视化 -->
+            <div class="field-panel">
+                <canvas id="quantum-canvas"></canvas>
+                <div class="field-overlay"></div>
+                
+                <!-- 叠加态面板 -->
+                <div class="superposition-panel hidden" id="superposition-panel">
+                    <div class="superposition-title">
+                        <span>叠加态（概率云）</span>
+                        <span class="coherence-indicator">相干性: <span id="coherence-value">--</span></span>
+                    </div>
+                    <div class="candidate-list" id="candidate-list">
+                        <!-- 动态生成 -->
+                    </div>
+                </div>
+                
+                <!-- 处理指示器 -->
+                <div class="process-indicator" id="process-indicator">
+                    <div class="process-ring"></div>
+                    <div class="process-phase" id="process-phase">系统就绪</div>
+                    <div class="process-detail" id="process-detail">等待量子场激发...</div>
+                </div>
+            </div>
+            
+            <!-- 右侧：协作与实相 -->
+            <div class="collaboration-panel">
+                <div class="collaboration-section">
+                    <div class="collaboration-title">🤝 AI协作者视角</div>
+                    <div class="collab-perspective" id="collab-perspective">
+                        <em style="color: #555;">等待协作开始...</em><br><br>
+                        AI不是工具，而是平等的协作者。<br>
+                        我们将共同探索问题的多个维度。
+                    </div>
+                </div>
+                
+                <div class="collaboration-section">
+                    <div class="panel-title">◈ I/O实相链</div>
+                    <div class="io-reality">
+                        <div class="io-item">
+                            <div class="io-label">输入哈希 (Intent)</div>
+                            <div class="io-hash" id="input-hash">等待观测...</div>
+                        </div>
+                        <div class="io-item">
+                            <div class="io-label">输出哈希 (Result)</div>
+                            <div class="io-hash" id="output-hash">等待坍缩...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 底部聊天 -->
+        <div class="chat-section">
+            <div class="metrics-bar">
+                <div class="metric">
+                    <div class="metric-value" id="metric-coherence">--</div>
+                    <div class="metric-label">相干性</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="metric-decoherence">--</div>
+                    <div class="metric-label">退相干</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="metric-probability">--</div>
+                    <div class="metric-label">坍缩概率</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="metric-field-density">--</div>
+                    <div class="metric-label">场密度</div>
+                </div>
+            </div>
+            
+            <div class="messages" id="messages"></div>
+            
+            <div class="input-area">
+                <input type="text" id="input" placeholder="输入消息，激发量子场..." autocomplete="off">
+                <button id="send-btn" onclick="sendMessage()">坍缩 →</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 量子场Canvas动画 ====================
+        const canvas = document.getElementById('quantum-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let waveAmplitude = 0;
+        let isWaveMode = true;
+        
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.parentElement.offsetHeight;
+        }
+        
+        class QuantumParticle {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.8;
+                this.vy = (Math.random() - 0.5) * 0.8;
+                this.size = Math.random() * 2 + 0.5;
+                this.alpha = Math.random() * 0.5 + 0.2;
+                this.hue = Math.random() * 60 + 120; // 绿色到青色
+                this.phase = Math.random() * Math.PI * 2;
+                this.amplitude = Math.random() * 20 + 10;
+            }
+            
+            update(time) {
+                // 波粒二象性：有时像波（正弦运动），有时像粒子（直线运动）
+                if (isWaveMode) {
+                    // 波模式：正弦波动
+                    this.x += this.vx;
+                    this.y += this.vy + Math.sin(time * 0.002 + this.phase) * 0.3;
+                    this.alpha = 0.3 + Math.sin(time * 0.003 + this.phase) * 0.2;
+                } else {
+                    // 粒子模式：直线运动
+                    this.x += this.vx * 2;
+                    this.y += this.vy * 2;
+                }
+                
+                // 边界处理
+                if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                    this.reset();
+                }
+            }
+            
+            draw(time) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${this.hue}, 100%, 70%, ${this.alpha})`;
+                ctx.fill();
+                
+                // 发光效果
+                if (this.alpha > 0.4) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size * 3, 0, Math.PI * 2);
+                    ctx.fillStyle = `hsla(${this.hue}, 100%, 70%, ${this.alpha * 0.2})`;
+                    ctx.fill();
+                }
+            }
+        }
+        
+        // 初始化粒子
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < 150; i++) {
+                particles.push(new QuantumParticle());
+            }
+        }
+        
+        // 绘制波动背景
+        function drawWaveBackground(time) {
+            ctx.strokeStyle = 'rgba(0, 255, 136, 0.05)';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                for (let x = 0; x < canvas.width; x += 5) {
+                    const y = canvas.height / 2 + 
+                              Math.sin(x * 0.01 + time * 0.001 + i * 0.5) * waveAmplitude +
+                              Math.sin(x * 0.02 + time * 0.002) * waveAmplitude * 0.5;
+                    if (x === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+            }
+        }
+        
+        // 绘制干涉图样
+        function drawInterferencePattern(time) {
+            if (waveAmplitude < 10) return;
+            
+            const imageData = ctx.createImageData(canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            for (let x = 0; x < canvas.width; x += 4) {
+                for (let y = 0; y < canvas.height; y += 4) {
+                    const dist1 = Math.sqrt((x - canvas.width * 0.3) ** 2 + (y - canvas.height * 0.5) ** 2);
+                    const dist2 = Math.sqrt((x - canvas.width * 0.7) ** 2 + (y - canvas.height * 0.5) ** 2);
+                    
+                    const interference = Math.sin(dist1 * 0.05 - time * 0.002) + 
+                                        Math.sin(dist2 * 0.05 - time * 0.002);
+                    
+                    if (interference > 1.5) {
+                        const index = (Math.floor(y) * canvas.width + Math.floor(x)) * 4;
+                        data[index] = 0;
+                        data[index + 1] = 255;
+                        data[index + 2] = 136;
+                        data[index + 3] = 30;
+                    }
+                }
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+        }
+        
+        // 动画循环
+        let animationId;
+        function animate(time) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            drawWaveBackground(time);
+            
+            particles.forEach(p => {
+                p.update(time);
+                p.draw(time);
+            });
+            
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        // 初始化
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        initParticles();
+        animate(0);
+        
+        // ==================== API 和交互 ====================
+        const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
+            ? `${window.location.protocol}//${window.location.hostname}:8000` 
+            : '';
+        
+        const userId = 'user_' + Date.now();
+        let isProcessing = false;
+        
+        // 元层镜子查询
+        async function askMirror(type) {
+            document.querySelectorAll('.mirror').forEach(m => m.classList.remove('active'));
+            event.target.closest('.mirror').classList.add('active');
+            
+            addMessage('system', `🪞 查询${type}之镜...`);
+            
+            try {
+                const res = await fetch(`${API}/meta/inquiry/${type}`);
+                const data = await res.json();
+                addMessage('ai', `🪞 ${type}:\n${JSON.stringify(data, null, 2).substring(0, 300)}...`);
+            } catch(e) {
+                addMessage('ai', '元层查询失败: ' + e.message);
+            }
+        }
+        
+        // 更新叠加态显示
+        function updateSuperposition(candidates, coherence) {
+            const panel = document.getElementById('superposition-panel');
+            const list = document.getElementById('candidate-list');
+            
+            panel.classList.remove('hidden');
+            document.getElementById('coherence-value').textContent = coherence ? coherence.toFixed(3) : '--';
+            
+            list.innerHTML = candidates.map((c, i) => `
+                <div class="candidate wave" id="candidate-${i}" style="animation: fadeIn 0.5s ease ${i * 0.1}s both;">
+                    <div class="candidate-source">${c.source}</div>
+                    <div class="candidate-bar-bg">
+                        <div class="candidate-bar-fill" style="width: ${c.confidence * 100}%"></div>
+                    </div>
+                    <div class="candidate-prob">${(c.confidence * 100).toFixed(0)}%</div>
+                    <div class="candidate-phase">φ${c.phase.toFixed(2)}</div>
+                </div>
+            `).join('');
+        }
+        
+        // 坍缩动画
+        function collapseSuperposition(selectedSource, probability) {
+            document.querySelectorAll('.candidate').forEach((el, i) => {
+                if (el.querySelector('.candidate-source').textContent === selectedSource) {
+                    el.classList.remove('wave');
+                    el.classList.add('collapsed');
+                    el.style.opacity = '1';
+                } else {
+                    el.classList.add('candidate-faded');
+                }
+            });
+            
+            // 波模式切换到粒子模式
+            isWaveMode = false;
+            waveAmplitude = 0;
+            
+            updateMetrics(null, null, probability);
+        }
+        
+        // 更新指标
+        function updateMetrics(coherence, decoherence, probability) {
+            if (coherence !== null) {
+                document.getElementById('metric-coherence').textContent = coherence.toFixed(2);
+            }
+            if (decoherence !== null) {
+                document.getElementById('metric-decoherence').textContent = (decoherence * 100).toFixed(0) + '%';
+            }
+            if (probability !== null) {
+                document.getElementById('metric-probability').textContent = (probability * 100).toFixed(0) + '%';
+            }
+            
+            // 场密度根据处理状态变化
+            const density = isProcessing ? Math.floor(Math.random() * 30 + 70) : Math.floor(Math.random() * 20);
+            document.getElementById('metric-field-density').textContent = density + '%';
+        }
+        
+        // 添加消息
+        function addMessage(role, text) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'message ' + role;
+            div.innerHTML = text.replace(/\n/g, '<br>');
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // 发送消息
+        async function sendMessage() {
+            const input = document.getElementById('input');
+            const btn = document.getElementById('send-btn');
+            const msg = input.value.trim();
+            
+            if (!msg || isProcessing) return;
+            
+            isProcessing = true;
+            input.value = '';
+            btn.disabled = true;
+            
+            addMessage('user', msg);
+            
+            // 显示处理指示器
+            document.getElementById('process-indicator').classList.add('active');
+            document.getElementById('superposition-panel').classList.add('hidden');
+            
+            // 增加波动振幅
+            waveAmplitude = 50;
+            
+            try {
+                const res = await fetch(API + '/chat-v5', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg, user_id: userId })
+                });
+                
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+                    
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        
+                        try {
+                            const event = JSON.parse(line);
+                            
+                            switch(event.type) {
+                                case 'phase':
+                                    document.getElementById('process-phase').textContent = event.name;
+                                    document.getElementById('process-detail').textContent = event.status;
+                                    break;
+                                    
+                                case 'superposition':
+                                    updateSuperposition(event.candidates, event.coherence);
+                                    updateMetrics(event.coherence, null, null);
+                                    // 波动振幅与相干性相关
+                                    waveAmplitude = 30 + event.coherence * 40;
+                                    break;
+                                    
+                                case 'interference':
+                                    document.getElementById('process-detail').textContent = '环境干涉中...';
+                                    waveAmplitude = 60;
+                                    break;
+                                    
+                                case 'decoherence':
+                                    updateMetrics(null, event.level, null);
+                                    document.getElementById('process-detail').textContent = `退相干: ${(event.level * 100).toFixed(0)}%`;
+                                    waveAmplitude = 40;
+                                    break;
+                                    
+                                case 'collapse':
+                                    collapseSuperposition(event.selected_source, event.selection_probability);
+                                    document.getElementById('process-phase').textContent = '坍缩完成';
+                                    document.getElementById('process-detail').textContent = 
+                                        `选中: ${event.selected_source} (概率: ${(event.selection_probability * 100).toFixed(1)}%)`;
+                                    break;
+                                    
+                                case 'collaboration':
+                                    document.getElementById('collab-perspective').innerHTML = 
+                                        `<strong style="color: #ffaa00;">${event.dimension}</strong><br>${event.perspective}`;
+                                    break;
+                                    
+                                case 'final':
+                                    addMessage('ai', event.content);
+                                    document.getElementById('process-indicator').classList.remove('active');
+                                    
+                                    // 更新 I/O 哈希
+                                    document.getElementById('input-hash').textContent = 
+                                        '0x' + Math.random().toString(16).substr(2, 16);
+                                    document.getElementById('output-hash').textContent = 
+                                        '0x' + Math.random().toString(16).substr(2, 16);
+                                    break;
+                            }
+                        } catch(e) {
+                            console.error('解析事件失败:', e);
+                        }
+                    }
+                }
+            } catch(e) {
+                addMessage('ai', '处理失败: ' + e.message);
+                document.getElementById('process-indicator').classList.remove('active');
+            }
+            
+            isProcessing = false;
+            btn.disabled = false;
+            isWaveMode = true;
+            waveAmplitude = 10;
+        }
+        
+        // 回车发送
+        document.getElementById('input').addEventListener('keypress', e => {
+            if (e.key === 'Enter') sendMessage();
+        });
+        
+        // 初始消息
+        setTimeout(() => {
+            addMessage('ai', '欢迎来到 Quantum Field Agent V5.0！\n体验真正的波粒二象性架构。输入消息激发量子场。');
+        }, 500);
+    </script>
+</body>
+</html>

@@ -574,3 +574,44 @@ def get_collaborator() -> Collaborator:
 async def init_collaborator() -> Collaborator:
     """初始化协作者"""
     return get_collaborator()
+
+
+# ==================== V5.0 辅助方法 ====================
+
+
+async def generate_perspective(topic: str) -> Dict[str, str]:
+    """
+    V5.0: 生成对话题的新视角
+    """
+    perspectives = [
+        (
+            "系统性思考",
+            f"将'{topic}'放入更大的系统中观察，你可能会发现新的联系和模式。",
+        ),
+        ("历史维度", f"回顾'{topic}'的历史演变，理解它如何成为今天的样子。"),
+        ("心理学视角", f"探索'{topic}'背后的心理动因和人类行为模式。"),
+        ("未来学", f"想象10年后，'{topic}'会如何发展？什么会改变？"),
+        ("对立视角", f"故意从反对'{topic}'的角度思考，可能会发现盲点。"),
+    ]
+
+    import random
+
+    dimension, perspective = random.choice(perspectives)
+
+    return {"dimension": dimension, "perspective": perspective}
+
+
+async def explore_dimensions(topic: str) -> List[Dict[str, str]]:
+    """
+    V5.0: 探索话题的多个维度
+    """
+    collaborator = get_collaborator()
+
+    dimensions = [
+        {"topic": f"{topic}的历史维度", "dimension": "历史"},
+        {"topic": f"{topic}的心理学维度", "dimension": "心理学"},
+        {"topic": f"{topic}的系统维度", "dimension": "系统思考"},
+        {"topic": f"{topic}的未来维度", "dimension": "未来学"},
+    ]
+
+    return dimensions
