@@ -17,10 +17,10 @@ from typing import Dict, List, Any
 class KnowledgeIntegrator:
     """
     知识整合器
-    
+
     不是告诉用户答案，而是帮助用户看到领域之间的连接
     """
-    
+
     def __init__(self):
         # 知识领域映射
         self.domain_mapping = {
@@ -35,7 +35,7 @@ class KnowledgeIntegrator:
             "艺术": ["绘画", "音乐", "舞蹈", "电影"],
             "数学": ["代数", "几何", "分析", "概率统计"],
         }
-        
+
         # 跨领域类比
         self.cross_domain_analogies = [
             {
@@ -75,9 +75,9 @@ class KnowledgeIntegrator:
         识别内容涉及的知识领域
         """
         domains = []
-        
+
         content_lower = content.lower()
-        
+
         # 检测关键词，映射到领域
         domain_keywords = {
             "技术/计算机": ["代码", "程序", "软件", "互联网", "AI", "算法", "数据"],
@@ -86,36 +86,40 @@ class KnowledgeIntegrator:
             "科学/研究": ["实验", "理论", "数据", "验证", "假设"],
             "哲学/思考": ["意义", "价值", "存在", "思考", "本质"],
             "心理学/情感": ["感受", "情绪", "心理", "关系", "沟通"],
-            "历史/文化": "历史", "传统", "文化", "过去", "背景",
+            "历史/文化": ["历史", "传统", "文化", "过去", "背景"],
             "艺术/创作": ["艺术", "创作", "表达", "灵感", "审美"],
         }
-        
+
         for domain, keywords in domain_keywords.items():
             if isinstance(keywords, list):
                 matches = [kw for kw in keywords if kw in content_lower]
             else:
                 matches = [keywords] if keywords in content_lower else []
-            
+
             if matches:
                 # 识别具体概念
                 concepts = await self._extract_concepts(content, domain)
-                
-                domains.append({
-                    "domain": domain,
-                    "matched_keywords": matches,
-                    "concepts": concepts,
-                    "confidence": len(matches) / max(len(keywords), 1),
-                })
-        
+
+                domains.append(
+                    {
+                        "domain": domain,
+                        "matched_keywords": matches,
+                        "concepts": concepts,
+                        "confidence": len(matches) / max(len(keywords), 1),
+                    }
+                )
+
         # 如果没有检测到，标记为通用
         if not domains:
-            domains.append({
-                "domain": "通用",
-                "matched_keywords": [],
-                "concepts": [],
-                "confidence": 0.5,
-            })
-        
+            domains.append(
+                {
+                    "domain": "通用",
+                    "matched_keywords": [],
+                    "concepts": [],
+                    "confidence": 0.5,
+                }
+            )
+
         return domains
 
     async def _extract_concepts(self, content: str, domain: str) -> List[str]:
@@ -124,61 +128,66 @@ class KnowledgeIntegrator:
         """
         # 简单提取：识别引号内的词、专有名词等
         import re
+
         patterns = [
             r'"([^"]+)"',  # 引号内的词
-            r'「([^」]+)」',  # 中文引号
-            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)',  # 英文专有名词
+            r"「([^」]+)」",  # 中文引号
+            r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)",  # 英文专有名词
         ]
-        
+
         concepts = []
         for pattern in patterns:
             matches = re.findall(pattern, content)
             concepts.extend(matches)
-        
+
         return concepts[:5]  # 最多返回5个概念
 
     async def find_connections(
-        self,
-        domains: List[Dict[str, Any]],
-        content: str
+        self, domains: List[Dict[str, Any]], content: str
     ) -> List[Dict[str, Any]]:
         """
         发现领域间的连接
         """
         connections = []
-        
+
         # 获取领域名称列表
         domain_names = [d["domain"] for d in domains]
-        
+
         # 检查预定义的跨领域类比
         for analogy in self.cross_domain_analogies:
-            if analogy["domain_a"] in domain_names and analogy["domain_b"] in domain_names:
-                connections.append({
-                    "type": "predefined_analogy",
-                    "domain_a": analogy["domain_a"],
-                    "domain_b": analogy["domain_b"],
-                    "analogy": analogy["analogy"],
-                    "connection": analogy["connection"],
-                })
-        
+            if (
+                analogy["domain_a"] in domain_names
+                and analogy["domain_b"] in domain_names
+            ):
+                connections.append(
+                    {
+                        "type": "predefined_analogy",
+                        "domain_a": analogy["domain_a"],
+                        "domain_b": analogy["domain_b"],
+                        "analogy": analogy["analogy"],
+                        "connection": analogy["connection"],
+                    }
+                )
+
         # 生成动态连接
         if len(domains) >= 2:
             # 连接前两个领域
-            connections.append({
-                "type": "dynamic_connection",
-                "domain_a": domains[0]["domain"],
-                "domain_b": domains[1]["domain"],
-                "analogy": f"{domains[0]['domain']}中的问题 ~ {domains[1]['domain']}中的模式",
-                "connection": self._generate_dynamic_connection(domains[0], domains[1], content),
-            })
-        
+            connections.append(
+                {
+                    "type": "dynamic_connection",
+                    "domain_a": domains[0]["domain"],
+                    "domain_b": domains[1]["domain"],
+                    "analogy": f"{domains[0]['domain']}中的问题 ~ {domains[1]['domain']}中的模式",
+                    "connection": self._generate_dynamic_connection(
+                        domains[0], domains[1], content
+                    ),
+                }
+            )
+
         return connections
 
     def _generate_dynamic_connection(
-        self,
-        domain_a: Dict[str, Any],
-        domain_b: Dict[str, Any],
-        content: str
+        self, domain_a: Dict[str, Any], domain_b: Dict[str, Any], content: str
     ) -> str:
         """
         生成动态连接
@@ -186,24 +195,22 @@ class KnowledgeIntegrator:
         return f"'{content[:30]}...'这个问题同时涉及'{domain_a['domain']}'和'{domain_b['domain']}'，两个领域可能有共同的底层逻辑"
 
     async def integrate(
-        self,
-        domains: List[Dict[str, Any]],
-        connections: List[Dict[str, Any]]
+        self, domains: List[Dict[str, Any]], connections: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
         整合不同领域的知识
         """
         # 发现核心模式
         core_pattern = await self._find_core_pattern(domains, connections)
-        
+
         # 生成整合洞见
         insight = await self._generate_insight(domains, connections)
-        
+
         # 生成整合视角
         integrated_perspectives = await self._generate_integrated_perspectives(
             domains, connections
         )
-        
+
         return {
             "core_pattern": core_pattern,
             "insight": insight,
@@ -213,28 +220,24 @@ class KnowledgeIntegrator:
         }
 
     async def _find_core_pattern(
-        self,
-        domains: List[Dict[str, Any]],
-        connections: List[Dict[str, Any]]
+        self, domains: List[Dict[str, Any]], connections: List[Dict[str, Any]]
     ) -> str:
         """
         发现核心模式
         """
         if not domains:
             return "没有检测到明确的领域模式"
-        
+
         if len(domains) == 1:
             return f"核心模式：'{domains[0]['domain']}'领域的{', '.join(domains[0].get('concepts', [])[:3])}"
-        
+
         if connections:
             return f"核心模式：'{connections[0]['domain_a']}'与'{connections[0]['domain_b']}'之间的{connections[0]['analogy']}"
-        
+
         return f"核心模式：{len(domains)}个不同领域的交叉点"
 
     async def _generate_insight(
-        self,
-        domains: List[Dict[str, Any]],
-        connections: List[Dict[str, Any]]
+        self, domains: List[Dict[str, Any]], connections: List[Dict[str, Any]]
     ) -> str:
         """
         生成整合洞见
@@ -245,44 +248,40 @@ class KnowledgeIntegrator:
             "创新的关键往往在于将一个领域的原理应用到另一个领域",
             "当你从多个角度看一个问题时，答案往往自然浮现",
         ]
-        
+
         if connections:
             return f"我发现：{connections[0]['connection']}"
-        
+
         return insights[0]
 
     async def _generate_integrated_perspectives(
-        self,
-        domains: List[Dict[str, Any]],
-        connections: List[Dict[str, Any]]
+        self, domains: List[Dict[str, Any]], connections: List[Dict[str, Any]]
     ) -> List[str]:
         """
         生成整合视角
         """
         perspectives = []
-        
+
         for d in domains:
             perspectives.append(
                 f"从{d['domain']}的角度看：{d.get('concepts', [])[0] if d.get('concepts') else '这个问题'}可以被理解为..."
             )
-        
+
         if len(domains) >= 2:
             perspectives.append(
                 f"从跨领域角度看：'{domains[0]['domain']}'和'{domains[1]['domain']}'可能有共同的底层逻辑"
             )
-        
+
         return perspectives[:3]
 
     async def generate_perspectives(
-        self,
-        domains: List[Dict[str, Any]],
-        content: str
+        self, domains: List[Dict[str, Any]], content: str
     ) -> List[Dict[str, Any]]:
         """
         生成跨领域新视角
         """
         perspectives = []
-        
+
         # 从每个领域生成视角
         for domain in domains[:3]:  # 最多3个领域
             perspective = {
@@ -292,7 +291,7 @@ class KnowledgeIntegrator:
                 "key_question": self._get_domain_question(domain["domain"], content),
             }
             perspectives.append(perspective)
-        
+
         # 生成整合视角
         if len(domains) >= 2:
             integrated = {
@@ -302,7 +301,7 @@ class KnowledgeIntegrator:
                 "key_question": f"如果用{domains[0]['domain']}和{domains[1]['domain']}的视角同时看这个问题，会得到什么？",
             }
             perspectives.append(integrated)
-        
+
         return perspectives
 
     def _get_domain_principle(self, domain: str) -> str:
@@ -319,7 +318,7 @@ class KnowledgeIntegrator:
             "历史/文化": "时间维度的考量",
             "艺术/创作": "表达和美的追求",
         }
-        
+
         return principles.get(domain, "独特的思维方式")
 
     def _get_domain_question(self, domain: str, content: str) -> str:
@@ -336,5 +335,5 @@ class KnowledgeIntegrator:
             "历史/文化": "这个问题在历史上有先例吗？",
             "艺术/创作": "如何用创造性的方式表达这个问题？",
         }
-        
+
         return questions.get(domain, f"从{domain}的角度，这个问题意味着什么？")

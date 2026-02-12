@@ -366,15 +366,21 @@ class Collaborator:
             topic
         )
 
+        # 构建视角文本（避免f-string中的反斜杠）
+        perspectives_text = "\n\n".join(
+            [f"**{p['perspective']}**\n{p['explanation']}" for p in perspectives[:4]]
+        )
+        challenges_text = "\n".join([f"- {c}" for c in challenges[:3]])
+
         response = f"""关于「{topic}」，让我提供几个你可能没有想过的视角：
 
 ## 多维视角
 
-{chr(10).join([f"**{p['perspective']}**\n{p['explanation']}" for p in perspectives[:4]])}
+{perspectives_text}
 
 ## 惯性思维的挑战
 
-{chr(10).join([f"- {c}" for c in challenges[:3]])}
+{challenges_text}
 
 ## 反常识视角
 

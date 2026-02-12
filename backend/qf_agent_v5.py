@@ -23,6 +23,7 @@ Quantum Field Agent V5.0 - True Wave-Particle Duality
 import os
 import asyncio
 import json
+import numpy as np
 from typing import Dict, List, Any, Optional, AsyncGenerator
 from datetime import datetime
 from dataclasses import asdict
