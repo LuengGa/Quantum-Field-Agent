@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Field Agent - 量子场控制台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #000;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .app {
+            display: grid;
+            grid-template-rows: 60px 1fr;
+            height: 100vh;
+        }
+        
+        /* 顶部栏 */
+        .header {
+            background: linear-gradient(180deg, rgba(0,255,136,0.1) 0%, rgba(0,0,0,0.8) 100%);
+            border-bottom: 1px solid rgba(0,255,136,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #00ff88, #00aaff);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+            50% { transform: scale(1.1); box-shadow: 0 0 40px rgba(0,255,136,0.6); }
+        }
+        
+        .logo-text {
+            font-size: 20px;
+            font-weight: 600;
+            background: linear-gradient(90deg, #00ff88, #00aaff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .header-stats {
+            display: flex;
+            gap: 24px;
+        }
+        
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .stat-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: blink 1.5s ease-in-out infinite;
+        }
+        
+        .stat-dot.online { background: #00ff88; }
+        .stat-dot.processing { background: #ffaa00; }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        
+        .stat-value {
+            font-size: 13px;
+            color: #00ff88;
+        }
+        
+        /* 主内容区 */
+        .main {
+            display: grid;
+            grid-template-columns: 260px 1fr 320px;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        /* 左侧：技能节点 */
+        .skills-panel {
+            background: rgba(0,0,0,0.4);
+            border-right: 1px solid rgba(0,255,136,0.15);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .panel-title {
+            font-size: 11px;
+            color: #00ff88;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .skill-node {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(0,255,136,0.1);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .skill-node::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0,255,136,0.1), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .skill-node:hover::before {
+            left: 100%;
+        }
+        
+        .skill-node:hover {
+            border-color: rgba(0,255,136,0.4);
+            background: rgba(0,255,136,0.05);
+            transform: translateX(4px);
+        }
+        
+        .skill-node.active {
+            border-color: #00ff88;
+            background: rgba(0,255,136,0.1);
+        }
+        
+        .skill-node.resonating {
+            border-color: #00aaff;
+            animation: resonate 0.5s ease;
+        }
+        
+        @keyframes resonate {
+            0%, 100% { box-shadow: 0 0 0 rgba(0,170,255,0); }
+            50% { box-shadow: 0 0 30px rgba(0,170,255,0.5); }
+        }
+        
+        .skill-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        
+        .skill-desc {
+            font-size: 11px;
+            color: #666;
+        }
+        
+        /* 中央：量子场可视化 */
+        .field-panel {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            background: radial-gradient(ellipse at center, rgba(0,50,30,0.3) 0%, #000 70%);
+            overflow: hidden;
+        }
+        
+        .field-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .field-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: url('data:image/svg+xml,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="1" fill="rgba(0,255,136,0.3)"/></svg>') repeat;
+            opacity: 0.1;
+            animation: drift 60s linear infinite;
+        }
+        
+        @keyframes drift {
+            from { transform: translate(0,0); }
+            to { transform: translate(-100px, -100px); }
+        }
+        
+        /* 场状态显示 */
+        .field-status {
+            position: relative;
+            z-index: 10;
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+        }
+        
+        .field-metric {
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 28px;
+            font-weight: 300;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .metric-label {
+            font-size: 10px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+        
+        /* 聊天区域 */
+        .chat-section {
+            position: relative;
+            z-index: 10;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin: 16px;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        
+        .message {
+            margin-bottom: 12px;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.user {
+            text-align: right;
+        }
+        
+        .message-content {
+            display: inline-block;
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .message.user .message-content {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message.ai .message-content {
+            background: rgba(0,255,136,0.08);
+            border: 1px solid rgba(0,255,136,0.2);
+            color: #fff;
+            border-bottom-left-radius: 4px;
+        }
+        
+        /* 底部输入 */
+        .input-section {
+            padding: 12px 16px;
+            border-top: 1px solid rgba(0,255,136,0.15);
+            display: flex;
+            gap: 10px;
+            background: rgba(0,0,0,0.4);
+        }
+        
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+        
+        .input-wrapper input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 24px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        
+        .input-wrapper input:focus {
+            border-color: #00ff88;
+            box-shadow: 0 0 20px rgba(0,255,136,0.2);
+        }
+        
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00ff88, #00cc6a);
+            border: none;
+            color: #000;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0,255,136,0.4);
+        }
+        
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* 右侧：处理过程 */
+        .process-panel {
+            background: rgba(0,0,0,0.4);
+            border-left: 1px solid rgba(0,255,136,0.15);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .process-timeline {
+            position: relative;
+        }
+        
+        .process-item {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .process-item::before {
+            content: '';
+            position: absolute;
+            left: 6px;
+            top: 0;
+            bottom: -20px;
+            width: 2px;
+            background: rgba(0,255,136,0.2);
+        }
+        
+        .process-item:last-child::before {
+            display: none;
+        }
+        
+        .process-dot {
+            position: absolute;
+            left: 0;
+            top: 4px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: rgba(0,255,136,0.2);
+            border: 2px solid rgba(0,255,136,0.4);
+        }
+        
+        .process-item.active .process-dot {
+            background: #00ff88;
+            box-shadow: 0 0 15px rgba(0,255,136,0.6);
+            animation: pulse-dot 1s ease infinite;
+        }
+        
+        @keyframes pulse-dot {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        
+        .process-item.complete .process-dot {
+            background: #00ff88;
+        }
+        
+        .process-name {
+            font-size: 12px;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        
+        .process-detail {
+            font-size: 11px;
+            color: #666;
+        }
+        
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            color: #00aaff;
+            font-size: 12px;
+        }
+        
+        .typing-indicator.active {
+            display: flex;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #00aaff;
+            animation: typing 1.4s ease-in-out infinite;
+        }
+        
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-8px); opacity: 1; }
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0,255,136,0.3);
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0,255,136,0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- 顶部栏 -->
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">⚛</div>
+                <div class="logo-text">Quantum Field Agent</div>
+            </div>
+            <div class="header-stats">
+                <div class="stat">
+                    <div class="stat-dot online"></div>
+                    <div>
+                        <div class="stat-label">状态</div>
+                        <div class="stat-value">在线</div>
+                    </div>
+                </div>
+                <div class="stat">
+                    <div class="stat-dot processing" id="processing-dot" style="display:none"></div>
+                    <div>
+                        <div class="stat-label">活跃技能</div>
+                        <div class="stat-value" id="active-skills">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main">
+            <!-- 左侧技能 -->
+            <div class="skills-panel">
+                <div class="panel-title">
+                    <span>◈</span> 可用技能
+                </div>
+                <div id="skills-container">
+                    <div class="skill-node">
+                        <div class="skill-name">加载中...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 中央量子场 -->
+            <div class="field-panel">
+                <div class="field-canvas" id="field-canvas"></div>
+                <div class="field-overlay"></div>
+                
+                <div class="field-status">
+                    <div class="field-metric">
+                        <div class="metric-value" id="entropy-value">0.00</div>
+                        <div class="metric-label">场熵值</div>
+                    </div>
+                    <div class="field-metric">
+                        <div class="metric-value" id="density-value">0%</div>
+                        <div class="metric-label">场密度</div>
+                    </div>
+                    <div class="field-metric">
+                        <div class="metric-value" id="coherence-value">0%</div>
+                        <div class="metric-label">相干性</div>
+                    </div>
+                </div>
+                
+                <!-- 聊天区域 -->
+                <div class="chat-section">
+                    <div class="messages" id="messages">
+                        <div class="message ai">
+                            <div class="message-content">
+                                你好！我是 Quantum Field Agent。<br>
+                                我拥有多个可动态激活的技能节点，<br>
+                                通过量子场共振与干涉机制处理你的请求。
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="typing-indicator" id="typing-indicator">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <span>处理中...</span>
+                    </div>
+                    
+                    <div class="input-section">
+                        <div class="input-wrapper">
+                            <input type="text" id="input" placeholder="输入消息，按 Enter 发送..." autocomplete="off">
+                        </div>
+                        <button class="send-btn" id="send-btn" onclick="sendMessage()">→</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧处理过程 -->
+            <div class="process-panel">
+                <div class="panel-title">
+                    <span>◈</span> 处理过程
+                </div>
+                <div class="process-timeline" id="process-timeline">
+                    <div class="process-item complete">
+                        <div class="process-dot"></div>
+                        <div class="process-name">系统就绪</div>
+                        <div class="process-detail">等待输入...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <canvas id="particle-canvas" style="position:fixed;top:0;left:0;pointer-events:none;z-index:0;"></canvas>
+    
+    <script>
+        // API 配置
+        const getAPI = () => {
+            const h = window.location.hostname;
+            return (h === 'localhost' || h === '127.0.0.1') 
+                ? `${window.location.protocol}//${h}:8000` 
+                : '';
+        };
+        const API = getAPI();
+        const userId = 'user_' + Date.now();
+        let isSending = false;
+        
+        // 粒子动画
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 2 + 1;
+                this.alpha = Math.random() * 0.5 + 0.2;
+                this.hue = Math.random() * 60 + 100;
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                    this.reset();
+                }
+            }
+            
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${this.hue}, 100%, 70%, ${this.alpha})`;
+                ctx.fill();
+            }
+        }
+        
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < 80; i++) {
+                particles.push(new Particle());
+            }
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        initParticles();
+        animate();
+        
+        // 清理文本
+        function cleanText(text) {
+            text = text.replace(/\|STAGE\|[^|]*\|/g, '');
+            text = text.replace(/\[[^\]]*激活[^\]]*\]/g, '');
+            text = text.replace(/\[[^\]]*技能[^\]]*\]/g, '');
+            text = text.replace(/assistant:\s*/g, '');
+            text = text.replace(/\b(model|entropy|tools|skills|complete|none|processing|collapse|interference|resonance)\b/gi, '');
+            text = text.replace(/\|[a-zA-Z]+\|/g, '');
+            text = text.replace(/\|/g, '');
+            text = text.replace(/\s+/g, ' ').trim();
+            return text;
+        }
+        
+        // 加载技能
+        async function loadSkills() {
+            try {
+                const res = await fetch(API + '/skills');
+                const data = await res.json();
+                const container = document.getElementById('skills-container');
+                container.innerHTML = data.skills.map(s => `
+                    <div class="skill-node" data-name="${s.name}" onclick="selectSkill('${s.name}')">
+                        <div class="skill-name">${s.name}</div>
+                        <div class="skill-desc">${s.description}</div>
+                    </div>
+                `).join('');
+            } catch(e) {
+                console.error('加载技能失败:', e);
+            }
+        }
+        
+        function selectSkill(name) {
+            document.querySelectorAll('.skill-node').forEach(n => n.classList.remove('active'));
+            document.querySelector(`[data-name="${name}"]`)?.classList.add('active');
+            document.getElementById('input').value = name + ' ';
+            document.getElementById('input').focus();
+        }
+        
+        // 处理过程更新
+        function addProcess(name, detail) {
+            const timeline = document.getElementById('process-timeline');
+            const item = document.createElement('div');
+            item.className = 'process-item active';
+            item.innerHTML = `
+                <div class="process-dot"></div>
+                <div class="process-name">${name}</div>
+                <div class="process-detail">${detail}</div>
+            `;
+            timeline.appendChild(item);
+            timeline.scrollTop = timeline.scrollHeight;
+            
+            // 更新技能节点动画
+            document.querySelectorAll('.skill-node').forEach(n => n.classList.remove('resonating'));
+        }
+        
+        function completeProcess() {
+            document.querySelectorAll('.process-item.active').forEach(n => {
+                n.classList.remove('active');
+                n.classList.add('complete');
+            });
+            document.getElementById('processing-dot').style.display = 'none';
+            document.getElementById('active-skills').textContent = '0';
+        }
+        
+        // 添加消息
+        function addMessage(role, text) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'message ' + role;
+            div.innerHTML = `<div class="message-content">${text.replace(/\n/g, '<br>')}</div>`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // 发送消息
+        async function sendMessage() {
+            const input = document.getElementById('input');
+            const btn = document.getElementById('send-btn');
+            const msg = input.value.trim();
+            
+            if (!msg || isSending) return;
+            
+            isSending = true;
+            input.value = '';
+            btn.disabled = true;
+            
+            addMessage('user', msg);
+            document.getElementById('typing-indicator').classList.add('active');
+            document.getElementById('processing-dot').style.display = 'block';
+            
+            // 清空处理过程
+            document.getElementById('process-timeline').innerHTML = '';
+            
+            try {
+                const res = await fetch(API + '/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg, user_id: userId })
+                });
+                
+                if (!res.ok) throw new Error('请求失败');
+                
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let shownStages = new Set();
+                
+                const aiDiv = document.createElement('div');
+                aiDiv.className = 'message ai';
+                aiDiv.innerHTML = `<div class="message-content"><span class="content"></span></div>`;
+                document.getElementById('messages').appendChild(aiDiv);
+                
+                const content = aiDiv.querySelector('.content');
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    // 检测处理阶段
+                    if (buffer.includes('|STAGE|')) {
+                        if (buffer.includes('resonance') && !shownStages.has('resonance')) {
+                            shownStages.add('resonance');
+                            addProcess('共振阶段', '场状态分析与技能匹配');
+                            document.getElementById('entropy-value').textContent = (Math.random() * 0.3 + 0.1).toFixed(2);
+                        }
+                        if (buffer.includes('interference') && !shownStages.has('interference')) {
+                            shownStages.add('interference');
+                            addProcess('干涉处理', '多路信号处理中...');
+                            document.getElementById('coherence-value').textContent = Math.floor(Math.random() * 20 + 75) + '%';
+                        }
+                        if (buffer.includes('collapse') && !shownStages.has('collapse')) {
+                            shownStages.add('collapse');
+                            addProcess('共识坍缩', '生成最终响应');
+                            document.getElementById('density-value').textContent = Math.floor(Math.random() * 30 + 60) + '%';
+                        }
+                    }
+                    
+                    const cleaned = cleanText(buffer);
+                    
+                    if (cleaned.length > 3 && !cleaned.match(/^[\s\|modelentropy]*$/)) {
+                        content.innerHTML = cleaned.replace(/\n/g, '<br>');
+                        buffer = '';
+                        document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+                    }
+                }
+                
+                completeProcess();
+                document.getElementById('entropy-value').textContent = '0.00';
+                document.getElementById('density-value').textContent = '0%';
+                document.getElementById('coherence-value').textContent = '0%';
+                
+            } catch(e) {
+                addMessage('ai', '抱歉，出错了');
+                completeProcess();
+                console.error(e);
+            }
+            
+            isSending = false;
+            btn.disabled = false;
+            document.getElementById('typing-indicator').classList.remove('active');
+        }
+        
+        // 回车发送
+        document.getElementById('input').addEventListener('keypress', e => {
+            if (e.key === 'Enter') sendMessage();
+        });
+        
+        // 初始化
+        loadSkills();
+    </script>
+</body>
+</html>

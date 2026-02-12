@@ -680,8 +680,8 @@ async def get_stats():
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
-    # 返回简洁的聊天界面
-    with open(FRONTEND_DIR / "chat.html", "r", encoding="utf-8") as f:
+    # 返回量子场控制台界面
+    with open(FRONTEND_DIR / "console.html", "r", encoding="utf-8") as f:
         return f.read()
 
 
