@@ -114,8 +114,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-PROJECT_ROOT = Path(__file__).parent.parent
-FRONTEND_DIR = PROJECT_ROOT / "frontend"
+# 使用绝对路径，兼容 Docker 环境
+SCRIPT_DIR = Path(__file__).resolve().parent
+# Docker 环境中 PROJECT_ROOT 就是 SCRIPT_DIR，因为代码直接在 /app 下
+if (SCRIPT_DIR / "frontend").exists():
+    FRONTEND_DIR = SCRIPT_DIR / "frontend"
+elif (SCRIPT_DIR.parent / "frontend").exists():
+    FRONTEND_DIR = SCRIPT_DIR.parent / "frontend"
+else:
+    FRONTEND_DIR = SCRIPT_DIR / "frontend"  # 默认使用同级 frontend 目录
 
 qf = QuantumField()
 
