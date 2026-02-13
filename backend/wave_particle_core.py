@@ -259,7 +259,9 @@ class WaveParticleEngine:
         # 2. 观测者效应：观测者偏好改变概率分布
         if observer != "default":
             # 观测者的"测量基"影响结果
-            observer_bias = self._get_observer_bias(observer, measurement_basis)
+            observer_bias = self._get_observer_bias(
+                observer, measurement_basis, len(state.candidates)
+            )
             probs = [p * (1 + b) for p, b in zip(probs, observer_bias)]
             # 重新归一化
             total = sum(probs)
@@ -300,15 +302,28 @@ class WaveParticleEngine:
 
         return particle_state, residual_state
 
-    def _get_observer_bias(self, observer: str, basis: str) -> List[float]:
+    def _get_observer_bias(
+        self, observer: str, basis: str, n_candidates: int
+    ) -> List[float]:
         """获取观测者偏差 - 不同观测者有不同的观测偏好"""
-        # 简化的观测者模型
-        biases = {
+        # 简化的观测者模型（动态适应候选数量）
+        base_biases = {
             "analytical_observer": [1.3, 0.8, 1.1, 0.9, 0.7],  # 偏好分析性
             "creative_observer": [0.8, 1.4, 0.7, 0.9, 1.0],  # 偏好创造性
             "critical_observer": [0.9, 0.7, 1.4, 1.0, 0.8],  # 偏好批判性
         }
-        return biases.get(observer, [1.0] * 5)
+
+        bias = base_biases.get(observer, [1.0] * 5)
+
+        # 动态扩展到匹配候选数量
+        if len(bias) < n_candidates:
+            # 重复最后一个值
+            bias = bias + [bias[-1]] * (n_candidates - len(bias))
+        elif len(bias) > n_candidates:
+            # 截断
+            bias = bias[:n_candidates]
+
+        return bias
 
 
 class DualityBridge:
