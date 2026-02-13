@@ -151,6 +151,11 @@ class BoundaryMirror:
                 "traditional_view": "记忆是存储-检索",
                 "quantum_view": "记忆是场的模式",
             },
+            BoundaryType.KNOWLEDGE: {
+                "description": "知识边界",
+                "traditional_view": "知识是确定的",
+                "quantum_view": "知识是概率云",
+            },
         }
 
     async def run_experiment(

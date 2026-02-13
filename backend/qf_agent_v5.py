@@ -381,7 +381,10 @@ class QuantumFieldAgentV5:
         """
         # 根据查询类型选择对应的镜子
         if inquiry_type == "consciousness":
-            return await self.meta_field.observe_consciousness()
+            return await self.meta_field.observe_consciousness(
+                context="用户查询意识状态",
+                processing_data={"query": "consciousness_inquiry"},
+            )
         elif inquiry_type == "constraints":
             return await self.meta_field.run_constraint_sweep()
         elif inquiry_type == "boundaries":
