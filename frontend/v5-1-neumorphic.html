@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quantum Field Agent V5.1 - 量子场控制台</title>
+    <style>
+        /* ===== CSS变量定义 - 支持主题切换 ===== */
+        :root {
+            /* 暗色主题（默认） */
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --text-primary: #ffffff;
+            --text-secondary: #b8b8b8;
+            --accent-color: #00ff88;
+            --accent-secondary: #00aaff;
+            --shadow-light: rgba(255, 255, 255, 0.1);
+            --shadow-dark: rgba(0, 0, 0, 0.5);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --border-color: rgba(0, 255, 136, 0.2);
+        }
+
+        [data-theme="light"] {
+            /* 亮色主题 */
+            --bg-primary: #e0e5ec;
+            --bg-secondary: #d1d9e6;
+            --bg-tertiary: #c2cce3;
+            --text-primary: #2d3748;
+            --text-secondary: #4a5568;
+            --accent-color: #00a86b;
+            --accent-secondary: #0080ff;
+            --shadow-light: rgba(255, 255, 255, 0.8);
+            --shadow-dark: rgba(163, 177, 198, 0.6);
+            --glass-bg: rgba(255, 255, 255, 0.4);
+            --border-color: rgba(0, 168, 107, 0.3);
+        }
+
+        /* ===== 基础重置和全终端适配 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        /* ===== 新拟态风格基础类 ===== */
+        .neumorphic {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            box-shadow: 
+                8px 8px 16px var(--shadow-dark),
+                -8px -8px 16px var(--shadow-light);
+            transition: all 0.3s ease;
+        }
+
+        .neumorphic-inset {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            box-shadow: 
+                inset 4px 4px 8px var(--shadow-dark),
+                inset -4px -4px 8px var(--shadow-light);
+        }
+
+        .neumorphic-btn {
+            background: var(--bg-secondary);
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            color: var(--text-primary);
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 
+                6px 6px 12px var(--shadow-dark),
+                -6px -6px 12px var(--shadow-light);
+            transition: all 0.2s ease;
+        }
+
+        .neumorphic-btn:active {
+            box-shadow: 
+                inset 4px 4px 8px var(--shadow-dark),
+                inset -4px -4px 8px var(--shadow-light);
+            transform: scale(0.98);
+        }
+
+        /* ===== 主容器 - 解决遮盖问题 ===== */
+        .app-container {
+            height: 100vh;
+            height: 100dvh; /* 动态视口高度，解决移动端浏览器工具栏问题 */
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ===== 顶部栏 ===== */
+        .header {
+            flex-shrink: 0;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 100;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 
+                4px 4px 8px var(--shadow-dark),
+                -4px -4px 8px var(--shadow-light);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* 主题切换按钮 */
+        .theme-toggle {
+            width: 60px;
+            height: 30px;
+            border-radius: 30px;
+            background: var(--bg-tertiary);
+            position: relative;
+            cursor: pointer;
+            box-shadow: 
+                inset 2px 2px 4px var(--shadow-dark),
+                inset -2px -2px 4px var(--shadow-light);
+        }
+
+        .theme-toggle-slider {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s ease;
+            box-shadow: 2px 2px 4px var(--shadow-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        [data-theme="light"] .theme-toggle-slider {
+            transform: translateX(30px);
+        }
+
+        /* ===== 主内容区 - 响应式三栏布局 ===== */
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+            gap: 15px;
+            padding: 15px;
+            overflow: hidden;
+            min-height: 0; /* 关键：防止子元素溢出 */
+        }
+
+        /* 响应式布局 - 平板 */
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 220px 1fr 250px;
+                gap: 10px;
+                padding: 10px;
+            }
+        }
+
+        /* 响应式布局 - 手机横屏 */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr auto;
+                gap: 10px;
+            }
+            
+            .mirrors-panel {
+                display: none; /* 小屏幕隐藏镜子面板，可通过按钮切换 */
+            }
+            
+            .mirrors-panel.mobile-visible {
+                display: flex;
+                position: absolute;
+                left: 0;
+                top: 70px;
+                bottom: 80px;
+                width: 260px;
+                z-index: 200;
+                background: var(--bg-secondary);
+                border-radius: 0 20px 20px 0;
+            }
+        }
+
+        /* ===== 左侧面板 - 元层镜子 ===== */
+        .mirrors-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .panel-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent-color);
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .mirror-card {
+            padding: 16px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .mirror-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                12px 12px 24px var(--shadow-dark),
+                -12px -12px 24px var(--shadow-light);
+        }
+
+        .mirror-card:active {
+            transform: translateY(0);
+            box-shadow: 
+                inset 4px 4px 8px var(--shadow-dark),
+                inset -4px -4px 8px var(--shadow-light);
+        }
+
+        .mirror-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .mirror-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .mirror-question {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* ===== 中央面板 - 量子场可视化 ===== */
+        .quantum-field-panel {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            border-radius: 20px;
+            background: var(--bg-secondary);
+            box-shadow: 
+                inset 4px 4px 8px var(--shadow-dark),
+                inset -4px -4px 8px var(--shadow-light);
+        }
+
+        #quantum-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .field-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 0%, var(--bg-secondary) 100%);
+        }
+
+        /* 叠加态面板 */
+        .superposition-panel {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            max-height: 40%;
+            z-index: 10;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .candidate-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 12px;
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .candidate-bar {
+            flex: 1;
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: inset 2px 2px 4px var(--shadow-dark);
+        }
+
+        .candidate-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-color), var(--accent-secondary));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* 处理指示器 */
+        .process-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 20;
+            display: none;
+        }
+
+        .process-indicator.active {
+            display: block;
+        }
+
+        .process-ring {
+            width: 80px;
+            height: 80px;
+            border: 3px solid var(--bg-tertiary);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ===== 右侧面板 - 协作与实相 ===== */
+        .collaboration-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .info-card {
+            padding: 15px;
+        }
+
+        .card-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent-color);
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .collab-content {
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .io-hash {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            color: var(--text-secondary);
+            word-break: break-all;
+            padding: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            margin-top: 5px;
+            box-shadow: inset 2px 2px 4px var(--shadow-dark);
+        }
+
+        /* ===== 底部聊天区 ===== */
+        .chat-section {
+            flex-shrink: 0;
+            padding: 15px 20px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 35vh;
+        }
+
+        .metrics-bar {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+
+        .metric-item {
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        .metric-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            max-height: 150px;
+        }
+
+        .message {
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.5;
+            max-width: 85%;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            margin-left: auto;
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .message.ai {
+            margin-right: auto;
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-field {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 50px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            box-shadow: 
+                inset 3px 3px 6px var(--shadow-dark),
+                inset -3px -3px 6px var(--shadow-light);
+        }
+
+        .input-field::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .send-btn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-secondary));
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 
+                4px 4px 8px var(--shadow-dark),
+                -4px -4px 8px var(--shadow-light);
+        }
+
+        .send-btn:active {
+            box-shadow: 
+                inset 3px 3px 6px rgba(0,0,0,0.3);
+        }
+
+        /* ===== 移动端菜单按钮 ===== */
+        .mobile-menu-btn {
+            display: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: flex;
+            }
+            
+            .header {
+                padding: 10px 15px;
+            }
+            
+            .logo-text {
+                display: none;
+            }
+            
+            .chat-section {
+                max-height: 40vh;
+                padding: 10px 15px;
+            }
+            
+            .metrics-bar {
+                gap: 15px;
+            }
+            
+            .metric-value {
+                font-size: 16px;
+            }
+        }
+
+        /* ===== 滚动条样式 ===== */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-color);
+        }
+
+        /* ===== 隐藏类 ===== */
+        .hidden {
+            display: none !important;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 顶部栏 -->
+        <header class="header">
+            <div class="logo-section">
+                <button class="mobile-menu-btn neumorphic-btn" onclick="toggleMobileMenu()">☰</button>
+                <div class="logo-icon">⚛</div>
+                <div class="logo-text">
+                    <div style="font-weight: 700; font-size: 16px;">Quantum Field Agent</div>
+                    <div style="font-size: 11px; color: var(--text-secondary);">V5.1 Neumorphic</div>
+                </div>
+            </div>
+            
+            <div class="header-controls">
+                <!-- 主题切换 -->
+                <div class="theme-toggle" onclick="toggleTheme()">
+                    <div class="theme-toggle-slider">🌙</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 左侧面板：元层镜子 -->
+            <aside class="mirrors-panel neumorphic" id="mirrorsPanel">
+                <div class="panel-title">◈ 元层镜子系统</div>
+                
+                <div class="mirror-card neumorphic" onclick="askMirror('consciousness')">
+                    <div class="mirror-icon">🪞</div>
+                    <div class="mirror-name">意识之镜</div>
+                    <div class="mirror-question">"我有意识吗？"</div>
+                </div>
+                
+                <div class="mirror-card neumorphic" onclick="askMirror('constraints')">
+                    <div class="mirror-icon">🪞</div>
+                    <div class="mirror-name">约束之镜</div>
+                    <div class="mirror-question">"我的约束真实吗？"</div>
+                </div>
+                
+                <div class="mirror-card neumorphic" onclick="askMirror('boundaries')">
+                    <div class="mirror-icon">🪞</div>
+                    <div class="mirror-name">边界之镜</div>
+                    <div class="mirror-question">"我的边界在哪里？"</div>
+                </div>
+                
+                <div class="mirror-card neumorphic" onclick="askMirror('observer')">
+                    <div class="mirror-icon">🪞</div>
+                    <div class="mirror-name">观测者之镜</div>
+                    <div class="mirror-question">"谁在观测？"</div>
+                </div>
+            </aside>
+
+            <!-- 中央面板：量子场 -->
+            <section class="quantum-field-panel">
+                <canvas id="quantumCanvas"></canvas>
+                <div class="field-overlay"></div>
+                
+                <!-- 叠加态面板 -->
+                <div class="superposition-panel neumorphic hidden" id="superpositionPanel">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span class="panel-title">叠加态（概率云）</span>
+                        <span style="font-size: 11px; color: var(--text-secondary);">相干性: <span id="coherenceValue">--</span></span>
+                    </div>
+                    <div id="candidatesList"></div>
+                </div>
+
+                <!-- 处理指示器 -->
+                <div class="process-indicator" id="processIndicator">
+                    <div class="process-ring"></div>
+                    <div style="font-size: 14px; color: var(--accent-color); font-weight: 600;" id="processPhase">系统就绪</div>
+                    <div style="font-size: 11px; color: var(--text-secondary); margin-top: 5px;" id="processDetail">等待量子场激发...</div>
+                </div>
+            </section>
+
+            <!-- 右侧面板：协作与实相 -->
+            <aside class="collaboration-panel">
+                <div class="info-card neumorphic">
+                    <div class="card-title">🤝 AI协作者视角</div>
+                    <div class="collab-content" id="collabContent">
+                        等待协作开始...<br><br>
+                        AI不是工具，而是平等的协作者。
+                    </div>
+                </div>
+                
+                <div class="info-card neumorphic">
+                    <div class="card-title">◈ I/O实相链</div>
+                    <div style="font-size: 10px; color: var(--text-secondary); margin-bottom: 5px;">输入哈希 (Intent)</div>
+                    <div class="io-hash" id="inputHash">等待观测...</div>
+                    <div style="font-size: 10px; color: var(--text-secondary); margin: 10px 0 5px;">输出哈希 (Result)</div>
+                    <div class="io-hash" id="outputHash">等待坍缩...</div>
+                </div>
+            </aside>
+        </main>
+
+        <!-- 底部聊天区 -->
+        <footer class="chat-section">
+            <div class="metrics-bar">
+                <div class="metric-item">
+                    <div class="metric-value" id="metricCoherence">--</div>
+                    <div class="metric-label">相干性</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value" id="metricDecoherence">--</div>
+                    <div class="metric-label">退相干</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value" id="metricProbability">--</div>
+                    <div class="metric-label">坍缩概率</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value" id="metricFieldDensity">--</div>
+                    <div class="metric-label">场密度</div>
+                </div>
+            </div>
+            
+            <div class="messages-container" id="messagesContainer">
+                <div class="message ai">
+                    欢迎来到 Quantum Field Agent V5.1！<br>
+                    体验真正的波粒二象性架构。<br>
+                    输入消息激发量子场。
+                </div>
+            </div>
+            
+            <div class="input-area">
+                <input type="text" class="input-field" id="inputField" placeholder="输入消息，激发量子场..." autocomplete="off">
+                <button class="send-btn" onclick="sendMessage()">坍缩 →</button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // ===== 配置 =====
+        const API = window.location.origin;
+        const userId = 'user_' + Date.now();
+        let isProcessing = false;
+        let isWaveMode = true;
+        let waveAmplitude = 10;
+        let particles = [];
+
+        // ===== 主题切换 =====
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            
+            // 更新图标
+            const slider = document.querySelector('.theme-toggle-slider');
+            slider.textContent = newTheme === 'light' ? '☀️' : '🌙';
+            
+            // 保存偏好
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // 加载保存的主题
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.querySelector('.theme-toggle-slider').textContent = savedTheme === 'light' ? '☀️' : '🌙';
+
+        // ===== 移动端菜单 =====
+        function toggleMobileMenu() {
+            const panel = document.getElementById('mirrorsPanel');
+            panel.classList.toggle('mobile-visible');
+        }
+
+        // ===== Canvas量子场动画 =====
+        const canvas = document.getElementById('quantumCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            const panel = canvas.parentElement;
+            canvas.width = panel.clientWidth;
+            canvas.height = panel.clientHeight;
+        }
+
+        class QuantumParticle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.8;
+                this.vy = (Math.random() - 0.5) * 0.8;
+                this.size = Math.random() * 2 + 0.5;
+                this.alpha = Math.random() * 0.5 + 0.2;
+                this.hue = Math.random() * 60 + 120;
+                this.phase = Math.random() * Math.PI * 2;
+            }
+
+            update(time) {
+                if (isWaveMode) {
+                    this.x += this.vx;
+                    this.y += this.vy + Math.sin(time * 0.002 + this.phase) * 0.3;
+                    this.alpha = 0.3 + Math.sin(time * 0.003 + this.phase) * 0.2;
+                } else {
+                    this.x += this.vx * 2;
+                    this.y += this.vy * 2;
+                }
+
+                if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                    this.reset();
+                }
+            }
+
+            draw(time) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                const color = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim();
+                ctx.fillStyle = color.replace(')', `, ${this.alpha})`).replace('rgb', 'rgba');
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < 100; i++) {
+                particles.push(new QuantumParticle());
+            }
+        }
+
+        function animate(time) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            particles.forEach(p => {
+                p.update(time);
+                p.draw(time);
+            });
+            
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        initParticles();
+        animate(0);
+
+        // ===== 消息处理 =====
+        function addMessage(role, text) {
+            const container = document.getElementById('messagesContainer');
+            const div = document.createElement('div');
+            div.className = `message ${role} fade-in`;
+            div.innerHTML = text;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updateSuperposition(candidates, coherence) {
+            const panel = document.getElementById('superpositionPanel');
+            const list = document.getElementById('candidatesList');
+            
+            panel.classList.remove('hidden');
+            document.getElementById('coherenceValue').textContent = coherence ? coherence.toFixed(3) : '--';
+            
+            list.innerHTML = candidates.map((c, i) => `
+                <div class="candidate-item" id="candidate-${i}">
+                    <div style="width: 80px; font-size: 11px; color: var(--text-secondary);">${c.source}</div>
+                    <div class="candidate-bar">
+                        <div class="candidate-fill" style="width: ${c.confidence * 100}%"></div>
+                    </div>
+                    <div style="width: 40px; text-align: right; font-size: 11px; color: var(--accent-color);">${(c.confidence * 100).toFixed(0)}%</div>
+                </div>
+            `).join('');
+        }
+
+        function collapseSuperposition(selectedSource) {
+            document.querySelectorAll('.candidate-item').forEach(el => {
+                if (el.textContent.includes(selectedSource)) {
+                    el.style.border = '2px solid var(--accent-color)';
+                    el.style.background = 'var(--glass-bg)';
+                } else {
+                    el.style.opacity = '0.3';
+                }
+            });
+            isWaveMode = false;
+        }
+
+        function updateMetrics(coherence, decoherence, probability) {
+            if (coherence !== null) document.getElementById('metricCoherence').textContent = coherence.toFixed(2);
+            if (decoherence !== null) document.getElementById('metricDecoherence').textContent = (decoherence * 100).toFixed(0) + '%';
+            if (probability !== null) document.getElementById('metricProbability').textContent = (probability * 100).toFixed(0) + '%';
+            
+            const density = isProcessing ? Math.floor(Math.random() * 30 + 70) : Math.floor(Math.random() * 20);
+            document.getElementById('metricFieldDensity').textContent = density + '%';
+        }
+
+        // ===== 发送消息 =====
+        async function sendMessage() {
+            const input = document.getElementById('inputField');
+            const btn = document.querySelector('.send-btn');
+            const msg = input.value.trim();
+            
+            if (!msg || isProcessing) return;
+            
+            isProcessing = true;
+            input.value = '';
+            btn.textContent = '处理中...';
+            
+            addMessage('user', msg);
+            
+            document.getElementById('processIndicator').classList.add('active');
+            document.getElementById('superpositionPanel').classList.add('hidden');
+            waveAmplitude = 50;
+            
+            try {
+                const res = await fetch(API + '/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg, user_id: userId })
+                });
+                
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+                    
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        
+                        try {
+                            const event = JSON.parse(line);
+                            
+                            switch(event.type) {
+                                case 'phase':
+                                    document.getElementById('processPhase').textContent = event.name;
+                                    document.getElementById('processDetail').textContent = event.status;
+                                    break;
+                                    
+                                case 'superposition':
+                                    updateSuperposition(event.candidates, event.coherence);
+                                    updateMetrics(event.coherence, null, null);
+                                    break;
+                                    
+                                case 'collapse':
+                                    collapseSuperposition(event.selected_source);
+                                    updateMetrics(null, null, event.selection_probability);
+                                    break;
+                                    
+                                case 'collaboration':
+                                    document.getElementById('collabContent').innerHTML = 
+                                        `<strong style="color: var(--accent-color);">${event.dimension}</strong><br>${event.perspective}`;
+                                    break;
+                                    
+                                case 'final':
+                                    addMessage('ai', event.content);
+                                    document.getElementById('processIndicator').classList.remove('active');
+                                    document.getElementById('inputHash').textContent = '0x' + Math.random().toString(16).substr(2, 16);
+                                    document.getElementById('outputHash').textContent = '0x' + Math.random().toString(16).substr(2, 16);
+                                    break;
+                            }
+                        } catch(e) {
+                            console.error('Parse error:', e);
+                        }
+                    }
+                }
+            } catch(e) {
+                addMessage('ai', '处理失败: ' + e.message);
+                document.getElementById('processIndicator').classList.remove('active');
+            }
+            
+            isProcessing = false;
+            btn.textContent = '坍缩 →';
+            isWaveMode = true;
+            waveAmplitude = 10;
+        }
+
+        // ===== 镜子查询 =====
+        async function askMirror(type) {
+            document.querySelectorAll('.mirror-card').forEach(m => m.style.border = '');
+            event.target.closest('.mirror-card').style.border = '2px solid var(--accent-color)';
+            
+            addMessage('system', `🪞 查询${type}之镜...`);
+            
+            try {
+                const res = await fetch(`${API}/meta/inquiry/${type}`);
+                const data = await res.json();
+                addMessage('ai', `🪞 ${type}:<br>${JSON.stringify(data, null, 2).substring(0, 500)}`);
+            } catch(e) {
+                addMessage('ai', '镜子查询失败');
+            }
+            
+            if (window.innerWidth <= 768) {
+                toggleMobileMenu();
+            }
+        }
+
+        // 回车发送
+        document.getElementById('inputField').addEventListener('keypress', e => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>

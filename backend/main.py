@@ -708,9 +708,9 @@ async def get_stats():
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
-    """V5.0 量子场控制台 - 真正的波粒二象性"""
-    # 默认使用V5.0量子控制台（真正的量子力学实现）
-    with open(FRONTEND_DIR / "v5-quantum-console.html", "r", encoding="utf-8") as f:
+    """V5.1 量子场控制台 - 新拟态风格，亮色/暗色主题切换"""
+    # 默认使用V5.1新拟态前端（支持主题切换、全终端响应式）
+    with open(FRONTEND_DIR / "v5-1-neumorphic.html", "r", encoding="utf-8") as f:
         return f.read()
 
 
