@@ -85,7 +85,8 @@ class QuantumFieldAgentV5:
         self.user_lock_manager = UserLockManager()
 
         # Layer 2: 波粒二象性核心（真正的创新）
-        self.wave_engine = WaveParticleEngine()
+        # 传入AI客户端，让叠加态生成真正的AI响应
+        self.wave_engine = WaveParticleEngine(ai_client=self.base_field.client)
         self.duality_bridge = DualityBridge(self.wave_engine)
 
         # Layer 3: 协作层

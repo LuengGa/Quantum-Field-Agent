@@ -98,9 +98,10 @@ class WaveParticleEngine:
     3. Duality Bridge: 波到粒子的转换（坍缩）
     """
 
-    def __init__(self):
+    def __init__(self, ai_client=None):
         self.decoherence_rate = 0.1  # 环境退相干率
         self.observation_backaction = 0.2  # 观测反作用强度
+        self.ai_client = ai_client  # AI客户端（OpenAI/Qwen）
 
     async def generate_superposition(
         self, query: str, context: Dict[str, Any], n_candidates: int = 5
@@ -123,14 +124,26 @@ class WaveParticleEngine:
             ("holistic", 0.75, np.pi),  # 整体性视角
         ]
 
+        # 如果有AI客户端，生成真正的响应；否则使用占位符
         for i, (perspective, amplitude_abs, phase) in enumerate(
             perspectives[:n_candidates]
         ):
             # 复数振幅：幅度 + 相位
             amplitude = amplitude_abs * np.exp(1j * phase)
 
+            # 生成该视角的响应内容
+            if self.ai_client:
+                try:
+                    content = await self._generate_perspective_response(
+                        query, perspective
+                    )
+                except Exception as e:
+                    content = f"[{perspective}] {query}"
+            else:
+                content = f"[{perspective}] {query}"
+
             candidate = CandidateResponse(
-                content=f"[{perspective}] 对'{query}'的响应",  # 占位，实际应调用模型
+                content=content,
                 amplitude=amplitude,
                 phase=phase,
                 confidence=amplitude_abs**2,
@@ -146,6 +159,36 @@ class WaveParticleEngine:
             coherence_time=10.0,  # 10秒相干时间
             created_at=datetime.now(),
         )
+
+    async def _generate_perspective_response(self, query: str, perspective: str) -> str:
+        """生成特定视角的AI响应"""
+        if not self.ai_client:
+            return f"[{perspective}] {query}"
+
+        # 根据视角构建不同的system prompt
+        perspective_prompts = {
+            "analytical": "你是一个分析型助手。请提供逻辑清晰、结构化的分析。",
+            "creative": "你是一个创意型助手。请提供创新、独特的想法。",
+            "critical": "你是一个批判型助手。请指出潜在问题和不同观点。",
+            "practical": "你是一个实用型助手。请提供具体可执行的建议。",
+            "holistic": "你是一个整体型助手。请从全局和系统角度思考。",
+        }
+
+        system_prompt = perspective_prompts.get(perspective, "你是一个有帮助的助手。")
+
+        try:
+            response = self.ai_client.chat.completions.create(
+                model="qwen-turbo",  # 或其他模型
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": query},
+                ],
+                max_tokens=150,
+                temperature=0.7,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            return f"[{perspective}] {query}"
 
     async def apply_interference(
         self, state: SuperpositionState, external_field: Optional[np.ndarray] = None
